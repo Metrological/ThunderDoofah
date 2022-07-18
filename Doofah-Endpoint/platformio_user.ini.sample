@@ -1,0 +1,27 @@
+;~~PlatformIO local user configuration
+;  Copy this file to platformio_user.ini and edit for your local config
+;
+;~~ Serial Port Configuration
+;  'monitor_port' and 'upload_port' need to be defined.
+;   For ESPixelStick, these ports will be the same.
+;
+;   The [env] section is top level and will be used for all devices
+;   and environments. If you have only one device, you can define
+;   the port here, or do nothing at all and PlatformIO will attempt
+;   to auto-detect it.
+;
+;   If you have multiple devices, you can define global [esp8266]
+;   or [esp32] specific ports.  If you want to target a specific
+;   build environment, you can do that as well. A list of all
+;   [env:] targets is defined in platformio.ini.
+;
+;~~ Optional configuration
+;   Configurations defined here will override platformio.ini
+;   https://docs.platformio.org/page/projectconf.html
+;
+
+;[env]
+;build_type = debug
+;monitor_port = /dev/ttyUSB0
+;upload_port = /dev/ttyUSB0
+;build_flags =
