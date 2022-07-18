@@ -39,7 +39,7 @@ namespace Plugin {
             : _skipURL(0)
             , _connectionId(0)
             , _service(nullptr)
-            , _communicator(nullptr)
+            , _communicator()
         {
             RegisterAll();
         }
@@ -107,7 +107,7 @@ namespace Plugin {
         uint8_t _skipURL;
         uint32_t _connectionId;
         PluginHost::IShell* _service;
-        WPEFramework::Doofah::SerialCommunicator* _communicator;
+        WPEFramework::Doofah::SerialCommunicator _communicator;
     };
 } // namespace Plugin
 } // namespace WPEFramework

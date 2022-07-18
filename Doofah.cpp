@@ -23,8 +23,7 @@
 
 namespace WPEFramework {
 
-    ENUM_CONVERSION_BEGIN(SimpleSerial::Payload::Peripheral)
-    { SimpleSerial::Payload::Peripheral::ROOT, _TXT("root") },
+ENUM_CONVERSION_BEGIN(SimpleSerial::Payload::Peripheral) { SimpleSerial::Payload::Peripheral::ROOT, _TXT("root") },
     { SimpleSerial::Payload::Peripheral::BLE, _TXT("ble") },
     { SimpleSerial::Payload::Peripheral::IR, _TXT("ir") },
     ENUM_CONVERSION_END(SimpleSerial::Payload::Peripheral);
@@ -50,17 +49,17 @@ namespace Plugin {
 
         string message;
         Config config;
-        
+
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
         _service = service;
         _service->AddRef();
 
-        _communicator = WPEFramework::Doofah::SerialCommunicator::Instance(config.Port.Value());
+        uint32_t result = _communicator.Configure(config.Port.Value());
 
-        if (message.length() != 0) {
-            Deinitialize(service);
+        if (result != Core::ERROR_NONE) {
+            message = "Could not setup communication channel";
         }
 
         return message;
@@ -69,8 +68,6 @@ namespace Plugin {
     /* virtual */ void Doofah::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(service == _service);
-
-        _communicator = nullptr;
 
         _service->Release();
         _service = nullptr;

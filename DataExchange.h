@@ -35,13 +35,12 @@ namespace SimpleSerial {
     template <typename LINK>
     class DataExchange {
     public:
-        DataExchange() = delete;
         DataExchange(const DataExchange<LINK>&) = delete;
         DataExchange<LINK>& operator=(const DataExchange<LINK>&) = delete;
 
-        DataExchange(const string& connector)
+        DataExchange()
             : _adminLock()
-            , _channel(*this, connector)
+            , _channel(*this)
             , _current(nullptr)
             , _exchange(false, true)
             , _buffer()

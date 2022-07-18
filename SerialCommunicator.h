@@ -49,12 +49,12 @@ namespace Doofah {
         public:
             Config()
                 : Core::JSON::Container()
-                , Port(_T("/dev/ttyUSB0"))
-                , Baudrate(115200)
+                , Connector(_T("/dev/ttyUSB0"))
+                , BaudRate(115200)
                 , FlowControl(Core::SerialPort::OFF)
             {
-                Add(_T("port"), &Port);
-                Add(_T("baudrate"), &Baudrate);
+                Add(_T("connector"), &Connector);
+                Add(_T("baudrate"), &BaudRate);
                 Add(_T("flowcontrol"), &FlowControl);
             }
             ~Config()
@@ -62,8 +62,8 @@ namespace Doofah {
             }
 
         public:
-            Core::JSON::String Port;
-            Core::JSON::DecUInt32 Baudrate;
+            Core::JSON::String Connector;
+            Core::JSON::DecUInt32 BaudRate;
             Core::JSON::EnumType<Core::SerialPort::FlowControl> FlowControl;
         };
 
@@ -176,7 +176,10 @@ namespace Doofah {
         };
 
     public:
-        SerialCommunicator() = delete;
+        SerialCommunicator()
+            : _channel(*this)
+        {
+        }
         SerialCommunicator(const SerialCommunicator&) = delete;
         SerialCommunicator& operator=(const SerialCommunicator&) = delete;
 
@@ -184,28 +187,16 @@ namespace Doofah {
 
         typedef Core::IteratorType<const std::list<SimpleSerial::Protocol::DeviceAddressType>, const SimpleSerial::Protocol::DeviceAddressType&, std::list<SimpleSerial::Protocol::DeviceAddressType>::const_iterator> DeviceIterator;
 
-        static SerialCommunicator* Instance(const string& connector)
-        {
-            static SerialCommunicator& instance = Core::SingletonType<SerialCommunicator>::Instance(connector.c_str());
-            return &instance;
-        }
-
         uint32_t Configure(const std::string& config);
 
         DeviceIterator Devices();
-
+        
         uint32_t KeyEvent(const SimpleSerial::Protocol::DeviceAddressType address, const bool pressed, const uint16_t code);
-
+        
         uint32_t Reset(const SimpleSerial::Protocol::DeviceAddressType address);
-        uint32_t Setting(const SimpleSerial::Protocol::DeviceAddressType address, const string& config);
+        uint32_t Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config);
 
-        // DeviceType Device(const uint16_t DeviceId);
     private:
-        SerialCommunicator(const std::string& connector)
-            : _channel(*this, connector)
-        {
-        }
-
         class Channel : public SimpleSerial::DataExchange<Core::SerialPort> {
         private:
             typedef SimpleSerial::DataExchange<Core::SerialPort> BaseClass;
@@ -215,8 +206,8 @@ namespace Doofah {
             Channel(const Channel&) = delete;
             Channel& operator=(const Channel&) = delete;
 
-            Channel(SerialCommunicator& parent, const string& connector)
-                : BaseClass(connector)
+            Channel(SerialCommunicator& parent)
+                : BaseClass()
                 , _parent(parent)
             {
             }
