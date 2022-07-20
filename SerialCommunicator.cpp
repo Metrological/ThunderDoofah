@@ -118,18 +118,39 @@ namespace Doofah {
     }
     uint32_t SerialCommunicator::Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config)
     {
-        uint32_t result(Core::ERROR_NONE);
+        uint32_t bleResult(Core::ERROR_NONE);
+        uint32_t irResult(Core::ERROR_NONE);
 
-        // SettingsMessage message(address);
+        PeripheralConfig peripheralConfig;
+        peripheralConfig.FromString(config);
 
-        // result = _channel.Post(message, 1000);
+        if (peripheralConfig.BLE.IsSet() == true) {
+            BLEConfig bleConfig;
+            bleConfig.FromString(peripheralConfig.BLE.Value()); 
 
-        // if ((result == Core::ERROR_NONE) && (message.Result() != SimpleSerial::Protocol::ResultType::OK)) {
-        //     TRACE(Trace::Error, ("Exchange Failed: %d\n", static_cast<uint8_t>(message.Result())));
-        //     result = Core::ERROR_GENERAL;
-        // }
+            SettingsMessage bleSettings(address, bleConfig);
 
-        return result;
+            bleResult = _channel.Post(bleSettings, 1000);
+
+            if ((bleResult == Core::ERROR_NONE) && (bleSettings.Result() != SimpleSerial::Protocol::ResultType::OK)) {
+                TRACE(Trace::Error, ("Exchange BLE settings Failed: %d\n", static_cast<uint8_t>(bleSettings.Result())));
+            }
+        }
+
+        if (peripheralConfig.IR.IsSet() == true) {
+            IRConfig irConfig;
+            irConfig.FromString(peripheralConfig.IR.Value()); 
+
+            SettingsMessage irSettings(address, irConfig);
+
+            irResult = _channel.Post(irSettings, 1000);
+
+            if ((irResult == Core::ERROR_NONE) && (irSettings.Result() != SimpleSerial::Protocol::ResultType::OK)) {
+                TRACE(Trace::Error, ("Exchange IR settings Failed: %d\n", static_cast<uint8_t>(irSettings.Result())));
+            }
+        }
+
+        return ((bleResult != Core::ERROR_NONE) && (irResult != Core::ERROR_NONE)) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
     }
 
     uint32_t SerialCommunicator::Release(const SimpleSerial::Protocol::DeviceAddressType address)

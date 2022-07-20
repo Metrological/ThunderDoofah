@@ -101,7 +101,7 @@ namespace Doofah {
                 : Core::JSON::Container()
                 , CarrierHz(38000)
             {
-                Add(_T("carrier"), &CarrierHz); 
+                Add(_T("carrier"), &CarrierHz);
             }
             ~IRConfig()
             {
@@ -109,6 +109,27 @@ namespace Doofah {
 
         public:
             Core::JSON::DecUInt16 CarrierHz;
+        };
+
+        class PeripheralConfig : public Core::JSON::Container {
+        private:
+            PeripheralConfig(const PeripheralConfig&) = delete;
+            PeripheralConfig& operator=(const PeripheralConfig&) = delete;
+
+        public:
+            PeripheralConfig()
+                : Core::JSON::Container()
+                , BLE()
+                , IR()
+            {
+                Add(_T("ble"), &BLE);
+                Add(_T("ir"), &IR);
+            }
+            ~PeripheralConfig() = default;
+
+        public:
+            Core::JSON::String BLE;
+            Core::JSON::String IR;
         };
 
         class ResourceMessage : public SimpleSerial::Protocol::Message {
@@ -199,11 +220,7 @@ namespace Doofah {
         };
 
         class SettingsMessage : public SimpleSerial::Protocol::Message {
-        public:
-            SettingsMessage() = delete;
-            SettingsMessage(const SettingsMessage&) = delete;
-            SettingsMessage& operator=(const SettingsMessage&) = delete;
-
+        private:
             SettingsMessage(const SimpleSerial::Protocol::DeviceAddressType address, const uint8_t length, const uint8_t payload[])
             {
                 Clear();
@@ -213,6 +230,46 @@ namespace Doofah {
                 Address(address);
                 PayloadLength(length);
                 Deserialize(length, payload);
+            }
+
+        public:
+            SettingsMessage() = delete;
+            SettingsMessage(const SettingsMessage&) = delete;
+            SettingsMessage& operator=(const SettingsMessage&) = delete;
+
+            SettingsMessage(const SimpleSerial::Protocol::DeviceAddressType address, const IRConfig& config)
+            {
+                SimpleSerial::Payload::IRSettings payload;
+
+                memset(&payload, 0, sizeof(payload));
+
+                if (config.CarrierHz.IsSet()) {
+                    payload.carrier_hz = config.CarrierHz.Value();
+                }
+
+                SettingsMessage(address, sizeof(payload), reinterpret_cast<uint8_t*>(&payload));
+            }
+
+            SettingsMessage(const SimpleSerial::Protocol::DeviceAddressType address, const BLEConfig& config)
+            {
+                SimpleSerial::Payload::BLESettings payload;
+
+                memset(&payload, 0, sizeof(payload));
+
+                if (config.VID.IsSet()) {
+                    payload.vid = config.VID.Value();
+                }
+
+                if (config.PID.IsSet()) {
+                    payload.pid = config.PID.Value();
+                }
+
+                if (config.Name.IsSet()) {
+                    uint8_t copyLength = std::min(config.Name.Value().size(), SimpleSerial::Protocol::MaxPayloadSize - (sizeof(payload) - sizeof(payload.name)));
+                    memcpy(&payload.vid, config.Name.Value().c_str(), copyLength);
+                }
+
+                SettingsMessage(address, sizeof(payload), reinterpret_cast<uint8_t*>(&payload));
             }
         };
 
