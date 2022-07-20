@@ -65,6 +65,23 @@ namespace Doofah {
             Core::JSON::EnumType<Core::SerialPort::FlowControl> FlowControl;
         };
 
+        class ResourceMessage : public SimpleSerial::Protocol::Message {
+        public:
+            ResourceMessage() = delete;
+            ResourceMessage(const ResourceMessage&) = delete;
+            ResourceMessage& operator=(const ResourceMessage&) = delete;
+
+            ResourceMessage(const SimpleSerial::Protocol::DeviceAddressType address, const bool aquire)
+            {
+                Clear();
+
+                Operation(aquire ? SimpleSerial::Protocol::OperationType::ALLOCATE : SimpleSerial::Protocol::OperationType::FREE);
+                Sequence(GetSequence());
+                Address(address);
+                PayloadLength(0);
+            }
+        };
+
         class KeyMessage : public SimpleSerial::Protocol::Message {
         public:
             KeyMessage() = delete;
@@ -110,7 +127,6 @@ namespace Doofah {
                 return (_offset < PayloadLength());
             }
 
-            
             inline bool Next()
             {
                 if (_offset == static_cast<uint8_t>(~0)) {
@@ -150,7 +166,6 @@ namespace Doofah {
                 Sequence(GetSequence());
                 Address(address);
                 PayloadLength(length);
-
                 Deserialize(length, payload);
             }
         };
@@ -192,6 +207,8 @@ namespace Doofah {
 
         uint32_t Reset(const SimpleSerial::Protocol::DeviceAddressType address);
         uint32_t Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config);
+
+        uint32_t Resource(const SimpleSerial::Protocol::DeviceAddressType address, const bool& aquire);
 
     private:
         class Channel : public SimpleSerial::DataExchange<Core::SerialPort> {
