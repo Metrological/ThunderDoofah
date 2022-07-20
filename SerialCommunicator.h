@@ -24,8 +24,6 @@
 #include "DataExchange.h"
 #include "SimpleSerial.h"
 
-#include "ICommunicator.h"
-
 #include <list>
 
 namespace WPEFramework {
@@ -112,8 +110,7 @@ namespace Doofah {
                 return (_offset < PayloadLength());
             }
 
-            typedef Core::IteratorType<const std::list<SimpleSerial::Payload::Device>, const SimpleSerial::Payload::Device&, std::list<SimpleSerial::Payload::Device>::const_iterator> DeviceIterator;
-
+            
             inline bool Next()
             {
                 if (_offset == static_cast<uint8_t>(~0)) {
@@ -185,14 +182,14 @@ namespace Doofah {
 
         virtual ~SerialCommunicator() = default;
 
-        typedef Core::IteratorType<const std::list<SimpleSerial::Protocol::DeviceAddressType>, const SimpleSerial::Protocol::DeviceAddressType&, std::list<SimpleSerial::Protocol::DeviceAddressType>::const_iterator> DeviceIterator;
+        typedef Core::IteratorType<const std::list<SimpleSerial::Payload::Device>, const SimpleSerial::Payload::Device&, std::list<SimpleSerial::Payload::Device>::const_iterator> DeviceIterator;
 
         uint32_t Configure(const std::string& config);
 
         DeviceIterator Devices();
-        
+
         uint32_t KeyEvent(const SimpleSerial::Protocol::DeviceAddressType address, const bool pressed, const uint16_t code);
-        
+
         uint32_t Reset(const SimpleSerial::Protocol::DeviceAddressType address);
         uint32_t Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config);
 

@@ -69,7 +69,7 @@ namespace Doofah {
 
     SerialCommunicator::DeviceIterator SerialCommunicator::Devices()
     {
-        std::list<SimpleSerial::Protocol::DeviceAddressType> devices;
+        std::list<SimpleSerial::Payload::Device> devices;
 
         StateMessage message(static_cast<SimpleSerial::Protocol::DeviceAddressType>(SimpleSerial::Payload::Peripheral::ROOT));
 
@@ -83,12 +83,14 @@ namespace Doofah {
         if (result == Core::ERROR_NONE) {
             message.Reset();
 
-            while (message.Next() == true) {
-                const SimpleSerial::Payload::Device* device = message.Current();
+            while ((message.Next() == true) && (message.Current() != nullptr)) {
+                SimpleSerial::Payload::Device device;
 
-                if (device != nullptr) {
-                    devices.push_back(device->address);
-                }
+                device.address = message.Current()->address;
+                device.state = message.Current()->state;
+                device.peripheral = message.Current()->peripheral;
+
+                devices.push_back(device);
             }
         }
 
