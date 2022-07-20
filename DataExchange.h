@@ -129,10 +129,10 @@ namespace SimpleSerial {
         virtual void StateChange()
         {
         }
-        virtual void Send(const Protocol::Message& message)
+        virtual void Send(const Protocol::Message& /*message*/)
         {
         }
-        virtual void Received(const Protocol::Message& message)
+        virtual void Received(const Protocol::Message& /*message*/)
         {
         }
 
