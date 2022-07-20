@@ -33,7 +33,7 @@ namespace Doofah {
     uint32_t SerialCommunicator::Configure(const string& configuration)
     {
         uint32_t result = Core::ERROR_NONE;
-        Config config;
+        SerialConfig config;
 
         config.FromString(configuration);
 

@@ -39,13 +39,13 @@ namespace Doofah {
             return g_sequence++;
         }
 
-        class Config : public Core::JSON::Container {
+        class SerialConfig : public Core::JSON::Container {
         private:
-            Config(const Config&) = delete;
-            Config& operator=(const Config&) = delete;
+            SerialConfig(const SerialConfig&) = delete;
+            SerialConfig& operator=(const SerialConfig&) = delete;
 
         public:
-            Config()
+            SerialConfig()
                 : Core::JSON::Container()
                 , Connector(_T("/dev/ttyUSB0"))
                 , BaudRate(115200)
@@ -55,7 +55,7 @@ namespace Doofah {
                 Add(_T("baudrate"), &BaudRate);
                 Add(_T("flowcontrol"), &FlowControl);
             }
-            ~Config()
+            ~SerialConfig()
             {
             }
 
@@ -63,6 +63,52 @@ namespace Doofah {
             Core::JSON::String Connector;
             Core::JSON::DecUInt32 BaudRate;
             Core::JSON::EnumType<Core::SerialPort::FlowControl> FlowControl;
+        };
+
+        class BLEConfig : public Core::JSON::Container {
+        private:
+            BLEConfig(const BLEConfig&) = delete;
+            BLEConfig& operator=(const BLEConfig&) = delete;
+
+        public:
+            BLEConfig()
+                : Core::JSON::Container()
+                , VID(0)
+                , PID(0)
+                , Name()
+            {
+                Add(_T("vid"), &VID);
+                Add(_T("pid"), &PID);
+                Add(_T("name"), &Name);
+            }
+            ~BLEConfig()
+            {
+            }
+
+        public:
+            Core::JSON::DecUInt16 VID;
+            Core::JSON::DecUInt16 PID;
+            Core::JSON::String Name;
+        };
+
+        class IRConfig : public Core::JSON::Container {
+        private:
+            IRConfig(const IRConfig&) = delete;
+            IRConfig& operator=(const IRConfig&) = delete;
+
+        public:
+            IRConfig()
+                : Core::JSON::Container()
+                , CarrierHz(38000)
+            {
+                Add(_T("carrier"), &CarrierHz); 
+            }
+            ~IRConfig()
+            {
+            }
+
+        public:
+            Core::JSON::DecUInt16 CarrierHz;
         };
 
         class ResourceMessage : public SimpleSerial::Protocol::Message {
