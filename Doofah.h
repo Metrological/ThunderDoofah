@@ -56,6 +56,29 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
+    private:
+        class KeyCodeBody : public Core::JSON::Container {
+        private:
+            KeyCodeBody& operator=(const KeyCodeBody&) = delete;
+
+        public:
+            inline KeyCodeBody()
+                : Core::JSON::Container()
+            {
+                Add(_T("code"), &Code);
+            }
+            inline KeyCodeBody(const KeyCodeBody& copy)
+                : Core::JSON::Container()
+                , Code(copy.Code)
+            {
+                Add(_T("code"), &Code);
+            }
+            ~KeyCodeBody() override = default;
+
+        public:
+            Core::JSON::HexUInt32 Code;
+        };
+
     public:
         class Config : public Core::JSON::Container {
         private:
