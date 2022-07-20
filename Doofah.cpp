@@ -28,6 +28,8 @@ ENUM_CONVERSION_BEGIN(SimpleSerial::Payload::Peripheral) { SimpleSerial::Payload
     { SimpleSerial::Payload::Peripheral::IR, _TXT("ir") },
     ENUM_CONVERSION_END(SimpleSerial::Payload::Peripheral);
 namespace Plugin {
+
+    static Core::ProxyPoolType<Web::TextBody> _textBodies(2);
     namespace {
         static Metadata<Doofah> metadata(
             // Version
@@ -80,29 +82,96 @@ namespace Plugin {
         return (string());
     }
 
-    /* virtual */ void Doofah::Inbound(Web::Request& /* request */)
+    bool Doofah::ParseKeyCodeBody(const Web::Request& request, uint32_t& code)
     {
+        bool parsed = false;
+        const string payload = ((request.HasBody() == true) ? string(*request.Body<const Web::TextBody>()) : "");
+
+        if (payload.empty() == false) {
+            Doofah::KeyCodeBody data;
+            data.FromString(payload);
+
+            if (data.Code.IsSet() == true) {
+                code = data.Code.Value();
+            }
+            parsed = true;
+        }
+
+        return parsed;
+    }
+
+    Core::ProxyType<Web::Response> Doofah::PutMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    {
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
+
+        uint32_t commResult(Core::ERROR_NONE);
+
+        result->ErrorCode = Web::STATUS_NOT_FOUND;
+        result->Message = string(_T("Unknown request path specified."));
+
+        if (index.IsValid() == true && index.Next() == true) {
+            bool pressed = false;
+
+            // PUT .../Doofah/Press|Release : send a code to the end point
+            if (((pressed = (index.Current() == _T("Press"))) == true) || (index.Current() == _T("Release"))) {
+                uint32_t code = 0;
+
+                if (ParseKeyCodeBody(request, code) == true) {
+                    if ((code != 0) && (commResult = _communicator.KeyEvent(_endpoint, pressed, code) == Core::ERROR_NONE)) {
+                        result->ErrorCode = Web::STATUS_ACCEPTED;
+                        result->Message = string((_T("key is sent")));
+                    } else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = string(_T("failed to sent key"));
+                    }
+                } else {
+                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                    result->Message = string(_T("No key code in body"));
+                }
+            } else if (index.Current() == _T("Setup")) {
+                if ((commResult = _communicator.Setup(_endpoint, (request.HasBody() == true) ? string(*request.Body<const Web::TextBody>()) : "") == Core::ERROR_NONE)) {
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = string(_T("Setup OK"));
+                } else {
+                    result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+                    result->Message = string(_T("Setup failed"));
+                }
+            } else if (index.Current() == _T("Reset")) {
+                if ((commResult = _communicator.Reset(_endpoint) == Core::ERROR_NONE)) {
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = string(_T("Reset OK"));
+                } else {
+                    result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+                    result->Message = string(_T("Reset failed"));
+                }
+            }
+        }
+        return (result);
+    }
+
+    /* virtual */ void Doofah::Inbound(Web::Request& request)
+    {
+        request.Body(_textBodies.Element());
     }
 
     /* virtual */ Core::ProxyType<Web::Response> Doofah::Process(const Web::Request& request)
     {
         ASSERT(_skipURL <= request.Path.length());
 
-        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
+        Core::ProxyType<Web::Response> result;
+        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length()) - _skipURL), false, '/');
 
-        // By default, we assume everything works..
-        result->ErrorCode = Web::STATUS_OK;
-        result->Message = "OK";
+        // By default, we are in front of any element, jump onto the first element, which is if, there is something an empty slot.
+        index.Next();
 
-        // <GET> - currently, only the GET command is supported, returning system info
-        if (request.Verb == Web::Request::HTTP_GET) {
-            result->Message = "GET";
-
+        // If there is nothing or only a slashe, we will now jump over it, and otherwise, we have data.
+        if (request.Verb == Web::Request::HTTP_PUT) {
+            result = PutMethod(index, request);
         } else {
-            result->ErrorCode = Web::STATUS_BAD_REQUEST;
-            result->Message = _T("Unsupported request for the [Doofah] service.");
+            result = PluginHost::IFactories::Instance().Response();
+            result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+            result->Message = string(_T("Unknown method used."));
         }
-
         return result;
     }
 

@@ -79,6 +79,9 @@ namespace Plugin {
             Core::JSON::HexUInt32 Code;
         };
 
+        bool ParseKeyCodeBody(const Web::Request& request, uint32_t& code);
+        Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
+
     public:
         class Config : public Core::JSON::Container {
         private:
