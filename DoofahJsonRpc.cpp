@@ -45,11 +45,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 
         if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true)) {
-            // if (_implementation != nullptr) {
-            //     result = _implementation->KeyEvent(true, params.Code.Value(), params.Device.Value());
-            // } else {
-            //     result = Core::ERROR_UNAVAILABLE;
-            // }
+            result = _communicator.KeyEvent(_endpoint, true, params.Code.Value());
         } else {
             result = Core::ERROR_BAD_REQUEST;
         }
@@ -61,11 +57,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 
         if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true)) {
-            // if (_implementation != nullptr) {
-            //     result = _implementation->KeyEvent(false, params.Code.Value(), params.Device.Value());
-            // } else {
-            //     result = Core::ERROR_UNAVAILABLE;
-            // }
+            result = _communicator.KeyEvent(_endpoint, false, params.Code.Value());
         } else {
             result = Core::ERROR_BAD_REQUEST;
         }
