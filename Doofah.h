@@ -40,6 +40,7 @@ namespace Plugin {
             , _connectionId(0)
             , _service(nullptr)
             , _communicator()
+            , _endpoint(0)
         {
             RegisterAll();
         }
@@ -103,11 +104,13 @@ namespace Plugin {
         uint32_t endpoint_release(const JsonData::RemoteControl::KeyobjInfo& params);
 
         void event_keypressed(const string& id, const bool& pressed);
+
     private:
         uint8_t _skipURL;
         uint32_t _connectionId;
         PluginHost::IShell* _service;
         WPEFramework::Doofah::SerialCommunicator _communicator;
+        SimpleSerial::Protocol::DeviceAddressType _endpoint;
     };
 } // namespace Plugin
 } // namespace WPEFramework
