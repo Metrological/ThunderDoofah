@@ -65,7 +65,7 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
-                , Port(_T("/dev/ttyUSB0"))
+                , Port()
                 , Device(~0)
                 , Peripheral(SimpleSerial::Payload::Peripheral::ROOT)
             {
