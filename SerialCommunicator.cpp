@@ -132,11 +132,11 @@ namespace Doofah {
         return result;
     }
 
-    uint32_t SerialCommunicator::Resource(const SimpleSerial::Protocol::DeviceAddressType address, const bool& aquire)
+    uint32_t SerialCommunicator::Release(const SimpleSerial::Protocol::DeviceAddressType address)
     {
         uint32_t result(Core::ERROR_NONE);
 
-        ResourceMessage message(address, aquire);
+        ResourceMessage message(address, false);
 
         result = _channel.Post(message, 1000);
 
@@ -147,5 +147,22 @@ namespace Doofah {
 
         return result;
     }
+
+    uint32_t SerialCommunicator::Allocate(const SimpleSerial::Protocol::DeviceAddressType address)
+    {
+        uint32_t result(Core::ERROR_NONE);
+
+        ResourceMessage message(address, true);
+
+        result = _channel.Post(message, 1000);
+
+        if ((result == Core::ERROR_NONE) && (message.Result() != SimpleSerial::Protocol::ResultType::OK)) {
+            TRACE(Trace::Error, ("Exchange Failed: %d\n", static_cast<uint8_t>(message.Result())));
+            result = Core::ERROR_GENERAL;
+        }
+
+        return result;
+    }
+
 } // namespace Doofah
 } // namespace WPEFramework

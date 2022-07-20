@@ -254,7 +254,8 @@ namespace Doofah {
         uint32_t Reset(const SimpleSerial::Protocol::DeviceAddressType address);
         uint32_t Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config);
 
-        uint32_t Resource(const SimpleSerial::Protocol::DeviceAddressType address, const bool& aquire);
+        uint32_t Release(const SimpleSerial::Protocol::DeviceAddressType address);
+        uint32_t Allocate(const SimpleSerial::Protocol::DeviceAddressType address);
 
     private:
         class Channel : public SimpleSerial::DataExchange<Core::SerialPort> {

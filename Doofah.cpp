@@ -63,13 +63,13 @@ namespace Plugin {
         if (result != Core::ERROR_NONE) {
 
             if (config.Device.IsSet()) {
-                _endpoint = (_communicator.Resource(config.Device.Value(), true) == Core::ERROR_NONE) ? config.Device.Value() : uint8_t(~0);
+                _endpoint = (_communicator.Allocate(config.Device.Value()) == Core::ERROR_NONE) ? config.Device.Value() : uint8_t(~0);
             } else if (config.Peripheral.IsSet()) {
                 WPEFramework::Doofah::SerialCommunicator::DeviceIterator devices = _communicator.Devices();
 
                 while ((devices.Next() == true) && (_endpoint != uint8_t(~0))) {
                     if ((devices.Current().peripheral == config.Peripheral.Value()) && devices.Current().state != WPEFramework::SimpleSerial::Payload::PeripheralState::OCCUPIED) {
-                        _endpoint = (_communicator.Resource(devices.Current().address, true) == Core::ERROR_NONE) ? devices.Current().address : uint8_t(~0);
+                        _endpoint = (_communicator.Allocate(devices.Current().address) == Core::ERROR_NONE) ? devices.Current().address : uint8_t(~0);
                     }
                 }
             }
@@ -87,6 +87,8 @@ namespace Plugin {
     /* virtual */ void Doofah::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(service == _service);
+
+        _communicator.Release(_endpoint);         
 
         _service->Release();
         _service = nullptr;
