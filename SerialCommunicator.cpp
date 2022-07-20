@@ -99,6 +99,10 @@ namespace Doofah {
 
     void SerialCommunicator::Received(const SimpleSerial::Protocol::Message& message)
     {
+        string data;
+        Core::ToHexString(message.Data(), message.Size(), data);
+
+        TRACE(Trace::Information, ("Received data: %s", data.c_str()));
     }
 
     uint32_t SerialCommunicator::Reset(const SimpleSerial::Protocol::DeviceAddressType address)
