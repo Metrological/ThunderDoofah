@@ -270,6 +270,28 @@ namespace SimpleSerial {
             uint16_t code;
         } KeyEvent;
 
+        typedef struct BLESettings {
+            uint16_t vid;
+            uint16_t pid;
+            char* name;
+        } BLESettings;
+
+        //
+        // TODO: 
+        // Somehow we need to be able to register keyCodes to ProntoHex codes or 
+        // add a learn function to the plugin. 
+        // more info:
+        // http://www.hifi-remote.com/wiki/index.php/Working_With_Pronto_Hex
+        // http://www.remotecentral.com/features/irdisp2.htm
+        // 
+        // tools for analysing IR and generating ProntoHex.
+        // http://www.harctoolbox.org/IrScrutinizer.html (Opensource)
+        // https://www.analysir.com/ (Paid)
+        // 
+        typedef struct IRSettings {
+            uint16_t carrier_hz;
+        } IRSettings;
+
         typedef struct Device {
             Protocol::DeviceAddressType address;
             PeripheralState state;
