@@ -61,6 +61,23 @@ namespace Plugin {
         uint32_t result = _communicator.Configure(config.Port.Value());
 
         if (result != Core::ERROR_NONE) {
+
+            if (config.Device.IsSet()) {
+                _endpoint = (_communicator.Resource(config.Device.Value(), true) == Core::ERROR_NONE) ? config.Device.Value() : uint8_t(~0);
+            } else if (config.Peripheral.IsSet()) {
+                WPEFramework::Doofah::SerialCommunicator::DeviceIterator devices = _communicator.Devices();
+
+                while ((devices.Next() == true) && (_endpoint != uint8_t(~0))) {
+                    if ((devices.Current().peripheral == config.Peripheral.Value()) && devices.Current().state != WPEFramework::SimpleSerial::Payload::PeripheralState::OCCUPIED) {
+                        _endpoint = (_communicator.Resource(devices.Current().address, true) == Core::ERROR_NONE) ? devices.Current().address : uint8_t(~0);
+                    }
+                }
+            }
+
+            if (_endpoint == uint8_t(~0)) {
+                message = "Failed to aquire endpoint";
+            }
+        } else {
             message = "Could not setup communication channel";
         }
 
