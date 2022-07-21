@@ -39,7 +39,7 @@ namespace Doofah {
         config.FromString(configuration);
 
         if (_channel.Link().Configuration(
-                config.Connector.Value(),
+                config.Port.Value(),
                 Core::SerialPort::Convert(config.BaudRate.Value()),
                 Core::SerialPort::NONE,
                 Core::SerialPort::BITS_8,

@@ -39,11 +39,11 @@ namespace Doofah {
         public:
             SerialConfig()
                 : Core::JSON::Container()
-                , Connector(_T("/dev/ttyUSB0"))
+                , Port(_T("/dev/ttyUSB0"))
                 , BaudRate(115200)
                 , FlowControl(Core::SerialPort::OFF)
             {
-                Add(_T("connector"), &Connector);
+                Add(_T("port"), &Port);
                 Add(_T("baudrate"), &BaudRate);
                 Add(_T("flowcontrol"), &FlowControl);
             }
@@ -52,7 +52,7 @@ namespace Doofah {
             }
 
         public:
-            Core::JSON::String Connector;
+            Core::JSON::String Port;
             Core::JSON::DecUInt32 BaudRate;
             Core::JSON::EnumType<Core::SerialPort::FlowControl> FlowControl;
         };
