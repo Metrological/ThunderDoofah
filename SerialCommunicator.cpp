@@ -30,7 +30,7 @@ ENUM_CONVERSION_BEGIN(Core::SerialPort::FlowControl) { Core::SerialPort::OFF, _T
     ENUM_CONVERSION_END(Core::SerialPort::FlowControl);
 
 namespace Doofah {
-    uint32_t SerialCommunicator::Configure(const string& configuration)
+    uint32_t SerialCommunicator::Initialize(const string& configuration)
     {
         uint32_t result = Core::ERROR_NONE;
         SerialConfig config;
@@ -54,6 +54,14 @@ namespace Doofah {
         TRACE(Trace::Information, ("Configured SerialCommunicator: %s", _channel.IsOpen() ? "succesful" : "failed"));
 
         return result;
+    }
+
+    void SerialCommunicator::Deinitialize()
+    {
+        if (_channel.IsOpen() == true) {
+            _channel.Flush();
+            _channel.Close(1000);
+        }
     }
 
     uint32_t SerialCommunicator::KeyEvent(const SimpleSerial::Protocol::DeviceAddressType address, const bool pressed, const uint16_t code)
@@ -183,7 +191,6 @@ namespace Doofah {
 
         return result;
     }
-
     uint32_t SerialCommunicator::Allocate(const SimpleSerial::Protocol::DeviceAddressType address)
     {
         uint32_t result(Core::ERROR_NONE);

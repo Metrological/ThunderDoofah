@@ -30,8 +30,6 @@ namespace WPEFramework {
 
 namespace Doofah {
     class SerialCommunicator {
-        friend class Core::SingletonType<SerialCommunicator>;
-
     private:
         static SimpleSerial::Protocol::SequenceType GetSequence()
         {
@@ -302,7 +300,8 @@ namespace Doofah {
 
         typedef Core::IteratorType<const std::list<SimpleSerial::Payload::Device>, const SimpleSerial::Payload::Device&, std::list<SimpleSerial::Payload::Device>::const_iterator> DeviceIterator;
 
-        uint32_t Configure(const std::string& config);
+        uint32_t Initialize(const std::string& config);
+        void Deinitialize(); 
 
         DeviceIterator Devices();
 

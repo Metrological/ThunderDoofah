@@ -58,10 +58,9 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
 
-        uint32_t result = _communicator.Configure(config.Port.Value());
+        uint32_t result = _communicator.Initialize(config.Port.Value());
 
-        if (result != Core::ERROR_NONE) {
-
+        if (result == Core::ERROR_NONE) {
             if (config.Device.IsSet()) {
                 _endpoint = (_communicator.Allocate(config.Device.Value()) == Core::ERROR_NONE) ? config.Device.Value() : uint8_t(~0);
             } else if (config.Peripheral.IsSet()) {
@@ -81,6 +80,10 @@ namespace Plugin {
             message = "Could not setup communication channel";
         }
 
+        if (message.empty() == false) {
+            Deinitialize(service);
+        }
+
         return message;
     }
 
@@ -88,7 +91,8 @@ namespace Plugin {
     {
         ASSERT(service == _service);
 
-        _communicator.Release(_endpoint);         
+        _communicator.Release(_endpoint);
+        _communicator.Deinitialize();
 
         _service->Release();
         _service = nullptr;
