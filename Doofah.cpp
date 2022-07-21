@@ -28,7 +28,6 @@ ENUM_CONVERSION_BEGIN(SimpleSerial::Payload::Peripheral) { SimpleSerial::Payload
     { SimpleSerial::Payload::Peripheral::IR, _TXT("ir") },
     ENUM_CONVERSION_END(SimpleSerial::Payload::Peripheral);
 namespace Plugin {
-
     static Core::ProxyPoolType<Web::TextBody> _textBodies(2);
     namespace {
         static Metadata<Doofah> metadata(
@@ -45,9 +44,6 @@ namespace Plugin {
     /* virtual */ const string Doofah::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
-        ASSERT(_service == nullptr);
-        ASSERT(_connectionId == 0);
-        ASSERT(_player == nullptr);
 
         string message;
         Config config;
@@ -55,8 +51,6 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        _service = service;
-        _service->AddRef();
 
         uint32_t result = _communicator.Initialize(config.Port.Value());
 
@@ -66,10 +60,14 @@ namespace Plugin {
             } else if (config.Peripheral.IsSet()) {
                 WPEFramework::Doofah::SerialCommunicator::DeviceIterator devices = _communicator.Devices();
 
-                while ((devices.Next() == true) && (_endpoint != uint8_t(~0))) {
-                    if ((devices.Current().peripheral == config.Peripheral.Value()) && devices.Current().state != WPEFramework::SimpleSerial::Payload::PeripheralState::OCCUPIED) {
-                        _endpoint = (_communicator.Allocate(devices.Current().address) == Core::ERROR_NONE) ? devices.Current().address : uint8_t(~0);
+                if (devices.IsValid()) {
+                    while ((devices.Next() == true) && (_endpoint != uint8_t(~0))) {
+                        if ((devices.Current().peripheral == config.Peripheral.Value()) && devices.Current().state != WPEFramework::SimpleSerial::Payload::PeripheralState::OCCUPIED) {
+                            _endpoint = (_communicator.Allocate(devices.Current().address) == Core::ERROR_NONE) ? devices.Current().address : uint8_t(~0);
+                        }
                     }
+                } else {
+                    message = "Failed to aquire remote devices";
                 }
             }
 
@@ -89,14 +87,8 @@ namespace Plugin {
 
     /* virtual */ void Doofah::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(service == _service);
-
         _communicator.Release(_endpoint);
         _communicator.Deinitialize();
-
-        _service->Release();
-        _service = nullptr;
-        _connectionId = 0;
     }
 
     /* virtual */ string Doofah::Information() const

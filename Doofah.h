@@ -37,8 +37,6 @@ namespace Plugin {
 
         Doofah()
             : _skipURL(0)
-            , _connectionId(0)
-            , _service(nullptr)
             , _communicator()
             , _endpoint(0)
         {
@@ -133,8 +131,6 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
-        uint32_t _connectionId;
-        PluginHost::IShell* _service;
         WPEFramework::Doofah::SerialCommunicator _communicator;
         SimpleSerial::Protocol::DeviceAddressType _endpoint;
     };
