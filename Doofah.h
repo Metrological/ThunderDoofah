@@ -87,11 +87,11 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
-                , Port()
+                , Connector()
                 , Device(~0)
                 , Peripheral(SimpleSerial::Payload::Peripheral::ROOT)
             {
-                Add(_T("port"), &Port);
+                Add(_T("connector"), &Connector);
                 Add(_T("device"), &Device);
                 Add(_T("peripheral"), &Peripheral);
             }
@@ -100,7 +100,7 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::String Port;
+            Core::JSON::String Connector;
             Core::JSON::DecUInt8 Device;
             Core::JSON::EnumType<SimpleSerial::Payload::Peripheral> Peripheral;
         };

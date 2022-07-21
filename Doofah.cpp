@@ -53,7 +53,7 @@ namespace Plugin {
 
         RegisterAll();
 
-        uint32_t result = _communicator.Initialize(config.Port.Value());
+        uint32_t result = _communicator.Initialize(config.Connector.Value());
 
         if (result == Core::ERROR_NONE) {
             if (config.Device.IsSet()) {
