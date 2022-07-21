@@ -31,7 +31,10 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_BENCHABLE_AUTOSTART true CACHE STRING true)
+set(PLUGIN_DOOFAH_AUTOSTART false CACHE STRING "Automaically start this plugin")
+set(PLUGIN_DOOFAH_CONNECTOR_CONFIG "" CACHE STRING "Custom config for the connector port")
+set(PLUGIN_DOOFAH_DEVICE_ADDRESS "" CACHE STRING "Predefined device address (Default 0)")
+set(PLUGIN_DOOFAH_PERIPHERAL "" CACHE STRING "Define a peripheral to use (root/ble/ir)")
 
 add_library(${MODULE_NAME} SHARED
     Doofah.cpp
