@@ -31,12 +31,6 @@ namespace WPEFramework {
 namespace Doofah {
     class SerialCommunicator {
     private:
-        static SimpleSerial::Protocol::SequenceType GetSequence()
-        {
-            static SimpleSerial::Protocol::SequenceType g_sequence = 0;
-            return g_sequence++;
-        }
-
         class SerialConfig : public Core::JSON::Container {
         private:
             SerialConfig(const SerialConfig&) = delete;
@@ -141,7 +135,7 @@ namespace Doofah {
                 Clear();
 
                 Operation(aquire ? SimpleSerial::Protocol::OperationType::ALLOCATE : SimpleSerial::Protocol::OperationType::FREE);
-                Sequence(GetSequence());
+                Sequence(SimpleSerial::GetSequence());
                 Address(address);
                 PayloadLength(0);
             }
@@ -163,7 +157,7 @@ namespace Doofah {
                 Clear();
 
                 Operation(SimpleSerial::Protocol::OperationType::KEY);
-                Sequence(GetSequence());
+                Sequence(SimpleSerial::GetSequence());
                 Address(address);
                 PayloadLength(sizeof(payload));
 
@@ -183,7 +177,7 @@ namespace Doofah {
                 Clear();
 
                 Operation(SimpleSerial::Protocol::OperationType::STATE);
-                Sequence(GetSequence());
+                Sequence(SimpleSerial::GetSequence());
                 Address(address);
             }
 
@@ -224,7 +218,7 @@ namespace Doofah {
                 Clear();
 
                 Operation(SimpleSerial::Protocol::OperationType::SETTINGS);
-                Sequence(GetSequence());
+                Sequence(SimpleSerial::GetSequence());
                 Address(address);
                 PayloadLength(length);
                 Deserialize(length, payload);
@@ -282,7 +276,7 @@ namespace Doofah {
                 Clear();
 
                 Operation(SimpleSerial::Protocol::OperationType::RESET);
-                Sequence(GetSequence());
+                Sequence(SimpleSerial::GetSequence());
                 Address(address);
                 PayloadLength(0);
             }
