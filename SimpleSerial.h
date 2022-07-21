@@ -74,7 +74,7 @@ namespace SimpleSerial {
 
         constexpr uint8_t MaxDataSize = 0xFF;
         constexpr uint8_t MaxPayloadSize = MaxDataSize - (sizeof(SequenceType) + sizeof(OperationType) + sizeof(DeviceAddressType) + sizeof(LengthType) + sizeof(CRC8Type));
-        constexpr uint8_t HeaderSize = 4;
+        constexpr uint8_t HeaderSize = sizeof(OperationType) + sizeof(SequenceType) + sizeof(DeviceAddressType) + sizeof(LengthType);
 
         static uint8_t CRC8(const uint8_t length, const uint8_t data[])
         {
