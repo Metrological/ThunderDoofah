@@ -51,6 +51,7 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
+        RegisterAll();
 
         uint32_t result = _communicator.Initialize(config.Port.Value());
 
@@ -87,6 +88,7 @@ namespace Plugin {
 
     /* virtual */ void Doofah::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
+        UnregisterAll();
         _communicator.Release(_endpoint);
         _communicator.Deinitialize();
     }

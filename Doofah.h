@@ -40,12 +40,10 @@ namespace Plugin {
             , _communicator()
             , _endpoint(0)
         {
-            RegisterAll();
         }
 
         virtual ~Doofah() override
         {
-            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(Doofah)
