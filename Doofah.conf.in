@@ -1,0 +1,7 @@
+autostart = '@PLUGIN_DOOFAH_AUTOSTART@'
+
+configuration = JSON()
+
+configuration.add("connector", '@PLUGIN_DOOFAH_CONNECTOR_CONFIG@')
+configuration.add("device", '@PLUGIN_DOOFAH_DEVICE_ADDRESS@')
+configuration.add("peripheral", '@PLUGIN_DOOFAH_PERIPHERAL@')
