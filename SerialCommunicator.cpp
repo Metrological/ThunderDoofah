@@ -34,6 +34,7 @@ namespace Doofah {
     {
         uint32_t result = Core::ERROR_NONE;
         SerialConfig config;
+        TRACE(Trace::Information, ("Configure SerialCommunicator: %s", configuration.c_str()));
 
         config.FromString(configuration);
 
@@ -50,6 +51,8 @@ namespace Doofah {
             result = Core::ERROR_INCOMPLETE_CONFIG;
         }
 
+        TRACE(Trace::Information, ("Configured SerialCommunicator: %s", _channel.IsOpen() ? "succesful" : "failed"));
+
         return result;
     }
 
@@ -60,7 +63,7 @@ namespace Doofah {
         uint32_t result = _channel.Post(message, 1000);
 
         if ((result == Core::ERROR_NONE) && (message.Result() != SimpleSerial::Protocol::ResultType::OK)) {
-            TRACE(Trace::Error, ("Exchange Failed: %d\n", static_cast<uint8_t>(message.Result())));
+            TRACE(Trace::Error, ("Exchange Failed: %d", static_cast<uint8_t>(message.Result())));
             result = Core::ERROR_GENERAL;
         }
 
@@ -76,7 +79,7 @@ namespace Doofah {
         uint32_t result = _channel.Post(message, 1000);
 
         if ((result == Core::ERROR_NONE) && (message.Result() != SimpleSerial::Protocol::ResultType::OK)) {
-            TRACE(Trace::Error, ("Exchange Failed: %d\n", static_cast<uint8_t>(message.Result())));
+            TRACE(Trace::Error, ("Exchange Failed: %d", static_cast<uint8_t>(message.Result())));
             result = Core::ERROR_GENERAL;
         }
 
@@ -94,6 +97,8 @@ namespace Doofah {
             }
         }
 
+        TRACE(Trace::Information, ("Got %d devices", devices.size()));
+
         return DeviceIterator(devices);
     }
 
@@ -109,12 +114,14 @@ namespace Doofah {
     {
         uint32_t result(Core::ERROR_NONE);
 
+        TRACE(Trace::Information, ("Reset device: 0x%02X", address));
+
         ResetMessage message(address);
 
         result = _channel.Post(message, 1000);
 
         if ((result == Core::ERROR_NONE) && (message.Result() != SimpleSerial::Protocol::ResultType::OK)) {
-            TRACE(Trace::Error, ("Exchange Failed: %d\n", static_cast<uint8_t>(message.Result())));
+            TRACE(Trace::Error, ("Exchange Failed: %d", static_cast<uint8_t>(message.Result())));
             result = Core::ERROR_GENERAL;
         }
 
@@ -128,29 +135,31 @@ namespace Doofah {
         PeripheralConfig peripheralConfig;
         peripheralConfig.FromString(config);
 
+        TRACE(Trace::Information, ("Setup device: 0x%02X", address));
+
         if (peripheralConfig.BLE.IsSet() == true) {
             BLEConfig bleConfig;
-            bleConfig.FromString(peripheralConfig.BLE.Value()); 
+            bleConfig.FromString(peripheralConfig.BLE.Value());
 
             SettingsMessage bleSettings(address, bleConfig);
 
             bleResult = _channel.Post(bleSettings, 1000);
 
             if ((bleResult == Core::ERROR_NONE) && (bleSettings.Result() != SimpleSerial::Protocol::ResultType::OK)) {
-                TRACE(Trace::Error, ("Exchange BLE settings Failed: %d\n", static_cast<uint8_t>(bleSettings.Result())));
+                TRACE(Trace::Error, ("Exchange BLE settings Failed: %d", static_cast<uint8_t>(bleSettings.Result())));
             }
         }
 
         if (peripheralConfig.IR.IsSet() == true) {
             IRConfig irConfig;
-            irConfig.FromString(peripheralConfig.IR.Value()); 
+            irConfig.FromString(peripheralConfig.IR.Value());
 
             SettingsMessage irSettings(address, irConfig);
 
             irResult = _channel.Post(irSettings, 1000);
 
             if ((irResult == Core::ERROR_NONE) && (irSettings.Result() != SimpleSerial::Protocol::ResultType::OK)) {
-                TRACE(Trace::Error, ("Exchange IR settings Failed: %d\n", static_cast<uint8_t>(irSettings.Result())));
+                TRACE(Trace::Error, ("Exchange IR settings Failed: %d", static_cast<uint8_t>(irSettings.Result())));
             }
         }
 
@@ -161,12 +170,14 @@ namespace Doofah {
     {
         uint32_t result(Core::ERROR_NONE);
 
+        TRACE(Trace::Information, ("Release device: 0x%02X", address));
+
         ResourceMessage message(address, false);
 
         result = _channel.Post(message, 1000);
 
         if ((result == Core::ERROR_NONE) && (message.Result() != SimpleSerial::Protocol::ResultType::OK)) {
-            TRACE(Trace::Error, ("Exchange Failed: %d\n", static_cast<uint8_t>(message.Result())));
+            TRACE(Trace::Error, ("Exchange Failed: %d", static_cast<uint8_t>(message.Result())));
             result = Core::ERROR_GENERAL;
         }
 
@@ -177,12 +188,14 @@ namespace Doofah {
     {
         uint32_t result(Core::ERROR_NONE);
 
+        TRACE(Trace::Information, ("Allocating device: 0x%02X", address));
+
         ResourceMessage message(address, true);
 
         result = _channel.Post(message, 1000);
 
         if ((result == Core::ERROR_NONE) && (message.Result() != SimpleSerial::Protocol::ResultType::OK)) {
-            TRACE(Trace::Error, ("Exchange Failed: %d\n", static_cast<uint8_t>(message.Result())));
+            TRACE(Trace::Error, ("Exchange Failed: %d", static_cast<uint8_t>(message.Result())));
             result = Core::ERROR_GENERAL;
         }
 
