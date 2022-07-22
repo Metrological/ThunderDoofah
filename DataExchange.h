@@ -126,6 +126,7 @@ namespace SimpleSerial {
         }
         inline uint32_t Post(Protocol::Message& message, const uint32_t allowedTime)
         {
+            message.Finalize();
             return (message.Operation() == Protocol::OperationType::EVENT) ? Submit(message) : Exchange(message, allowedTime);
         }
 
@@ -234,9 +235,11 @@ namespace SimpleSerial {
             _adminLock.Lock();
 
             if (_current != nullptr) {
-               _current->Finalize();
-
                 result = _current->Serialize(maxSendSize, dataFrame);
+
+#ifdef BE_CHATTY
+                TRACE(Trace::Information, ("Send %d bytes to %p", result, dataFrame));
+#endif
 
                 if (result == 0) {
                     Send(*_current);
