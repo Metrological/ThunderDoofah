@@ -143,7 +143,7 @@ namespace SimpleSerial {
                     _offset += copyLength;
                 }
 
-                return _size - _offset;
+                return copyLength;
             }
 
             bool IsComplete() const
