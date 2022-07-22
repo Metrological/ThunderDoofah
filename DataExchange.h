@@ -29,6 +29,9 @@ namespace SimpleSerial {
     static Protocol::SequenceType GetSequence()
     {
         static Protocol::SequenceType g_sequence = 0;
+#ifdef BE_CHATTY
+        TRACE_GLOBAL(Trace::Information, (_T("Provided sequence id: 0x%02X(%d)"), g_sequence, g_sequence));
+#endif
         return g_sequence++;
     }
 
@@ -129,11 +132,34 @@ namespace SimpleSerial {
         virtual void StateChange()
         {
         }
-        virtual void Send(const Protocol::Message& /*message*/)
+        virtual void Send(const Protocol::Message& message VARIABLE_IS_NOT_USED)
         {
+#ifdef BE_CHATTY
+            string data;
+            Core::ToHexString(message.Data(), message.Size(), data);
+
+            TRACE(Trace::Information, ("Message Operation: 0x%02X", message.Operation()));
+            TRACE(Trace::Information, ("Message Sequence: 0x%02X", message.Sequence()));
+            TRACE(Trace::Information, ("Message Address: 0x%02X", message.Address()));
+            TRACE(Trace::Information, ("Message PayloadLength: 0x%02X", message.PayloadLength()));
+            TRACE(Trace::Information, ("Message Complete: %s", _current->IsComplete() ? "Yes" : "No"));
+            
+            TRACE(Trace::Information, ("Send message: %s", data.c_str()));
+#endif
         }
-        virtual void Received(const Protocol::Message& /*message*/)
+        virtual void Received(const Protocol::Message& message VARIABLE_IS_NOT_USED)
         {
+#ifdef BE_CHATTY
+            string data;
+            Core::ToHexString(message.Data(), message.Size(), data);
+            TRACE(Trace::Information, ("Received message: %s", data.c_str()));
+
+            TRACE(Trace::Information, ("Message Operation: 0x%02X", message.Operation()));
+            TRACE(Trace::Information, ("Message Sequence: 0x%02X", message.Sequence()));
+            TRACE(Trace::Information, ("Message Address: 0x%02X", message.Address()));
+            TRACE(Trace::Information, ("Message PayloadLength: 0x%02X", message.PayloadLength()));
+            TRACE(Trace::Information, ("Message Valid: %s", message.IsValid() ? "Yes" : "No"));
+#endif
         }
 
     private:

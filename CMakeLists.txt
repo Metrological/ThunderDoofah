@@ -55,5 +55,8 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
+target_compile_definitions(${MODULE_NAME} PRIVATE
+   $<$<CONFIG:Debug>:BE_CHATTY>
+)
 
 write_config()
