@@ -179,6 +179,7 @@ namespace Doofah {
                 Operation(SimpleSerial::Protocol::OperationType::STATE);
                 Sequence(SimpleSerial::GetSequence());
                 Address(address);
+                PayloadLength(0);
             }
 
             inline bool IsValidPayload() const
@@ -295,7 +296,7 @@ namespace Doofah {
         typedef Core::IteratorType<const std::list<SimpleSerial::Payload::Device>, const SimpleSerial::Payload::Device&, std::list<SimpleSerial::Payload::Device>::const_iterator> DeviceIterator;
 
         uint32_t Initialize(const std::string& config);
-        void Deinitialize(); 
+        void Deinitialize();
 
         DeviceIterator Devices();
 
