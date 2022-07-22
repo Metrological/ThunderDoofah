@@ -89,7 +89,9 @@ namespace Plugin {
     /* virtual */ void Doofah::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         UnregisterAll();
-        _communicator.Release(_endpoint);
+        if (_endpoint != uint8_t(~0)) {
+            _communicator.Release(_endpoint);
+        }
         _communicator.Deinitialize();
     }
 
