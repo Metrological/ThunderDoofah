@@ -208,6 +208,8 @@ namespace SimpleSerial {
             _adminLock.Lock();
 
             if (_current != nullptr) {
+               _current->Finalize();
+
                 result = _current->Serialize(maxSendSize, dataFrame);
 
                 if (result == 0) {

@@ -243,6 +243,19 @@ namespace SimpleSerial {
                 }
                 _buffer[1] = static_cast<uint8_t>(sequence);
             }
+
+            inline uint8_t Finalize()
+            {   
+                CRC8Type crc(0); 
+
+                if ((_size >= HeaderSize) && (_size >= (HeaderSize + PayloadLength()))) {
+                    crc = CRC8((HeaderSize + PayloadLength()), _buffer);
+                    _buffer[HeaderSize + PayloadLength()] = crc;
+                    _size = HeaderSize + PayloadLength() + sizeof(CRC8Type);
+                }
+
+                return crc; 
+            }
         };
     } // namespace Protocol
 
@@ -277,17 +290,17 @@ namespace SimpleSerial {
         } BLESettings;
 
         //
-        // TODO: 
-        // Somehow we need to be able to register keyCodes to ProntoHex codes or 
-        // add a learn function to the plugin. 
+        // TODO:
+        // Somehow we need to be able to register keyCodes to ProntoHex codes or
+        // add a learn function to the plugin.
         // more info:
         // http://www.hifi-remote.com/wiki/index.php/Working_With_Pronto_Hex
         // http://www.remotecentral.com/features/irdisp2.htm
-        // 
+        //
         // tools for analysing IR and generating ProntoHex.
         // http://www.harctoolbox.org/IrScrutinizer.html (Opensource)
         // https://www.analysir.com/ (Paid)
-        // 
+        //
         typedef struct IRSettings {
             uint16_t carrier_hz;
         } IRSettings;
