@@ -121,8 +121,8 @@ namespace SimpleSerial {
                         _size += result;
                     }
 
-                    if ((_size >= HeaderSize) && (result < length) && (PayloadLength() != 0)) {
-                        uint8_t copyLength = std::min((length - result), (_size - HeaderSize - PayloadLength()));
+                    if ((_size >= HeaderSize) && (result < length)) {
+                        uint8_t copyLength = std::min(uint8_t(length - result), uint8_t(_size - HeaderSize + PayloadLength() + sizeof(CRC8Type)));
 
                         std::memcpy(&_buffer[_size], data, copyLength);
 
@@ -149,11 +149,11 @@ namespace SimpleSerial {
 
             bool IsComplete() const
             {
-                return ((_size > HeaderSize) && (_size >= (HeaderSize + PayloadLength() + 1)));
+                return ((_size > HeaderSize) && (_size >= (HeaderSize + PayloadLength() + sizeof(CRC8Type))));
             }
             bool IsValid() const
             {
-                return (IsComplete() && CRC8(_size - 1, _buffer) == _buffer[_size]);
+                return (IsComplete() && CRC8( (HeaderSize + PayloadLength()) , _buffer) == _buffer[ (HeaderSize + PayloadLength()) ]);
             }
 
             inline uint8_t Size() const
