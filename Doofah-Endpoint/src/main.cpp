@@ -147,16 +147,20 @@ void Process(Protocol::Message &message)
       break;
 
     case Protocol::OperationType::STATE:
-      message.Offset(0);
-      message.PayloadLength(devices.size() * sizeof(Payload::Device));
+    {
+      uint8_t offset(0);
+      uint8_t payload[devices.size() * sizeof(Payload::Device)];
 
       for (const auto &dev : devices)
       {
-        message.Deserialize(sizeof(dev), reinterpret_cast<const uint8_t *>(&dev));
+        memcpy(&payload[offset],reinterpret_cast<const uint8_t *>(&dev),  sizeof(Payload::Device));
+        offset += sizeof(Payload::Device);
       }
 
+      message.Payload(sizeof(payload), payload);
       result = Protocol::ResultType::OK;
       break;
+    }
 
     case Protocol::OperationType::EVENT:
       ASSERT(false); // We should be generating this...
