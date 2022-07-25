@@ -49,7 +49,7 @@ namespace SimpleSerial {
         // |0x01|0x01|0x01|0x00|CRC8|
 
         enum class OperationType : uint8_t {
-            RESET = 0x00, // reset/(dis)enable controller/peripheral
+            RESET = 0x01, // reset/(dis)enable controller/peripheral
             ALLOCATE,
             FREE,
             KEY, // Do a key action press/release + keycode
@@ -69,7 +69,8 @@ namespace SimpleSerial {
             NOT_CONNECTED,
             NOT_AVAILABLE,
             TRANSMIT_FAILED,
-            CRC_INVALID
+            CRC_INVALID,
+            OPERATION_INVALID,
         };
 
         constexpr uint8_t MaxDataSize = 0xFF;
