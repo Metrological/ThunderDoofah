@@ -221,8 +221,7 @@ namespace Doofah {
                 Operation(SimpleSerial::Protocol::OperationType::SETTINGS);
                 Sequence(SimpleSerial::GetSequence());
                 Address(address);
-                PayloadLength(length);
-                Deserialize(length, payload);
+                Payload(length, payload);
             }
 
         public:
