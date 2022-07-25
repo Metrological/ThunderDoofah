@@ -153,7 +153,7 @@ namespace SimpleSerial {
             }
             bool IsValid() const
             {
-                return (IsComplete() && CRC8( (HeaderSize + PayloadLength()) , _buffer) == _buffer[ (HeaderSize + PayloadLength()) ]);
+                return (IsComplete() && CRC8((HeaderSize + PayloadLength()), _buffer) == _buffer[(HeaderSize + PayloadLength())]);
             }
 
             inline uint8_t Size() const
@@ -205,9 +205,26 @@ namespace SimpleSerial {
                 _buffer[3] = static_cast<uint8_t>(length);
             }
 
-            inline const uint8_t* Payload()
+            inline const uint8_t* Payload() const
             {
                 return &_buffer[HeaderSize];
+            }
+
+            inline uint8_t Payload(const uint8_t length, const uint8_t data[])
+            {
+                uint8_t result(0);
+
+                if ((length > 0) && (length <= MaxPayloadSize)) {
+                    if (_size < HeaderSize) {
+                        _size = HeaderSize;
+                    }
+
+                    _buffer[3] = static_cast<uint8_t>(length);
+
+                    memcpy(&_buffer[HeaderSize], data, length);
+                }
+
+                return result;
             }
 
             inline ResultType Result() const
@@ -237,8 +254,8 @@ namespace SimpleSerial {
             }
 
             inline uint8_t Finalize()
-            {   
-                CRC8Type crc(0); 
+            {
+                CRC8Type crc(0);
 
                 if ((_size >= HeaderSize) && (_size >= (HeaderSize + PayloadLength()))) {
                     crc = CRC8((HeaderSize + PayloadLength()), _buffer);
@@ -249,7 +266,7 @@ namespace SimpleSerial {
                 // Ready to be send...
                 _offset = 0;
 
-                return crc; 
+                return crc;
             }
         };
     } // namespace Protocol
