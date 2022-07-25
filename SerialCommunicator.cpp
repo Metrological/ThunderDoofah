@@ -51,7 +51,11 @@ namespace Doofah {
             result = Core::ERROR_INCOMPLETE_CONFIG;
         }
 
-        TRACE(Trace::Information, ("Configured SerialCommunicator[%s]: %s", _channel.RemoteId().c_str() ,_channel.IsOpen() ? "succesful" : "failed"));
+        if (_channel.IsOpen() == true) {
+            _channel.Flush();
+        }
+        
+        TRACE(Trace::Information, ("Configured SerialCommunicator[%s]: %s", _channel.RemoteId().c_str(), _channel.IsOpen() ? "succesful" : "failed"));
 
         return result;
     }
