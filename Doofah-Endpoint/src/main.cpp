@@ -1,38 +1,34 @@
 #include <Arduino.h>
 #include <BleKeyboard.h>
+#include <NimBLEDevice.h>
 #include <SimpleSerial.h>
 #include <EEPROM.h>
 
-#define EEPROM_SIZE 2
-
 using namespace WPEFramework::SimpleSerial;
 
-static const char *ID()
-{
-  static char id[23] = {};
-
-  if (strlen(id) == 0)
-  {
-    // The chip ID is essentially its MAC address(length: 6 bytes).
-    uint64_t chipid = ESP.getEfuseMac();
-    snprintf(id, 23, "Doofah-%04X%08X", (uint16_t)(chipid >> 32), (uint32_t)chipid);
-  }
-
-  return id;
-}
-
-BleKeyboard bleKeyboard(ID(), "Metrological");
+BleKeyboard bleKeyboard("Doofah", "Metrological");
 Protocol::Message buffer;
 std::vector<Payload::Device> devices;
 
-
-constexpr uint8_t InvalidEEPROMValue = 0xFF;
-
-//EEPROM addresses
+// EEPROM addresses
 constexpr uint8_t MessageBaseAddress = 0x00;
-constexpr uint8_t MessageOperationAddress = MessageBaseAddress;
-constexpr uint8_t MessageSequenceAddress = MessageBaseAddress + 1;
 
+struct Config {
+  // The default values if there is no EEPROM setting yet..
+  Config() 
+    : ProductId(0)
+    , VendorId(0)
+    , Address(0) {
+  }
+
+  // Values that can be set to change the bahaviour of the Doofah..
+  uint16_t ProductId;
+  uint16_t VendorId;
+  uint8_t Address;
+
+} _config;
+
+#ifdef __DEBUG__
 void log(const char *fmt, ...)
 {
   va_list args;
@@ -51,14 +47,34 @@ void log(const char *fmt, ...)
 
   Serial2.println(&buffer[0]);
 }
-
-Protocol::ResultType KeyMessage(const Payload::KeyEvent *event)
+#else 
+void log (const char *, ...)
 {
-  uint8_t keycode(event->code & 0xff);
+}
+#endif
 
-  log("Sending key event: 0x%02X (0x%04X)", keycode, event->code);
+// Store information in the EEPROM that should be persited over boots
+// ------------------------------------------------------------------------
+void Save()
+{
+  EEPROM.writeBytes(MessageBaseAddress, &_config, sizeof(_config));
+  EEPROM.commit();
+}
 
-  if (event->pressed == Payload::Action::PRESSED)
+void Load()
+{
+  if (EEPROM.readByte(MessageBaseAddress) != 0xFF) {
+    EEPROM.readBytes(MessageBaseAddress, &_config, sizeof(_config));
+  }
+}
+
+Protocol::ResultType KeyMessage(const Payload::KeyEvent& event)
+{
+  uint8_t keycode(event.code & 0xff);
+
+  log("Sending key event: 0x%02X (0x%04X)", keycode, event.code);
+
+  if (event.pressed == Payload::Action::PRESSED)
   {
     bleKeyboard.press(keycode);
   }
@@ -73,56 +89,28 @@ Protocol::ResultType KeyMessage(const Payload::KeyEvent *event)
 void SendMessage(const Protocol::Message &message)
 {
   uint8_t data(0);
+
   log("Sending %d bytes with operation=0x%02X result=0x%02X...", message.Size(), message.Operation(), message.Result());
 
-  while (message.Serialize(sizeof(data), &data) == 0)
+  while (message.Serialize(sizeof(data), &data) != 0)
   {
     Serial.write(data);
   }
 }
 
-void Persist(const uint8_t operation, const uint8_t sequence)
-{
-  EEPROM.write(MessageOperationAddress, operation);
-  EEPROM.write(MessageSequenceAddress, sequence);
-  EEPROM.commit();
-}
-
-void HandleReboot()
-{
-  uint8_t operation = EEPROM.read(MessageOperationAddress);
-
-  if (operation != InvalidEEPROMValue)
-  {
-    log("Handle reset: 0x%02X was found on MessageOperationAddress", operation);
-
-    buffer.Operation(static_cast<Protocol::OperationType>(operation));
-    buffer.Sequence(EEPROM.read(MessageSequenceAddress));
-    buffer.Result(Protocol::ResultType::OK);
-    buffer.PayloadLength(0);
-
-    buffer.Finalize();
-
-    SendMessage(buffer);
-
-    buffer.Clear();
-    
-    // reset EEPROM
-    Persist(InvalidEEPROMValue, InvalidEEPROMValue);
-  }
-}
 
 void Process(Protocol::Message &message)
 {
-  Protocol::ResultType result(Protocol::ResultType::OK);
+  bool reboot = false;
 
   log("Processing %d 0x%02X...", message.Size(), message.Operation());
 
-  if (message.IsValid() == true)
-  {
-
+  if (message.IsValid() == false) {
+    message.PayloadLength(0);
+    message.Result(Protocol::ResultType::CRC_INVALID);
+  }
+  else {
     Protocol::ResultType result = Protocol::ResultType::OPERATION_INVALID;
-    message.Offset(0);
 
     switch (message.Operation())
     {
@@ -131,31 +119,23 @@ void Process(Protocol::Message &message)
       message.PayloadLength(0);
       break;
 
-    case Protocol::OperationType::EVENT:
-      result = Protocol::ResultType::OK;
-      message.PayloadLength(0);
-      break;
-
     case Protocol::OperationType::FREE:
       result = Protocol::ResultType::OK;
       message.PayloadLength(0);
-
       break;
 
     case Protocol::OperationType::KEY:
       if (message.PayloadLength() == sizeof(Payload::KeyEvent))
       {
-        result = KeyMessage(reinterpret_cast<const Payload::KeyEvent *>(message.Payload()));
+        result = KeyMessage(*(reinterpret_cast<const Payload::KeyEvent *>(message.Payload())));
       }
-
       message.PayloadLength(0);
       break;
 
     case Protocol::OperationType::RESET:
       if (message.Address() == static_cast<Protocol::DeviceAddressType>(Payload::Peripheral::ROOT))
       {
-        Persist(static_cast<uint8_t>(message.Operation()), message.Sequence());
-        ESP.restart();
+        reboot = true;
         result = Protocol::ResultType::OK;
         message.PayloadLength(0);
       }
@@ -178,44 +158,47 @@ void Process(Protocol::Message &message)
       result = Protocol::ResultType::OK;
       break;
 
+    case Protocol::OperationType::EVENT:
+      ASSERT(false); // We should be generating this...
+      break;
+
     default:
       message.PayloadLength(0);
-      result = Protocol::ResultType::OPERATION_INVALID;
       break;
     }
 
     message.Result(result);
   }
-  else
-  {
-    message.PayloadLength(0);
-    message.Result(Protocol::ResultType::CRC_INVALID);
-  }
 
   message.Finalize();
-  message.Offset(0);
 
   SendMessage(message);
+
+  if (reboot == true) {
+    ESP.restart();
+  }
 
   message.Clear();
 }
 
 void setup()
 {
-  EEPROM.begin(EEPROM_SIZE);
+  #ifdef __DEBUG__
   Serial2.begin(LOGBAUDRATE, SERIAL_8N1, LOGRXPIN, LOGTXPIN);
+  #endif
 
-  log("Starting %s endpoint build %s", ID(), __TIMESTAMP__);
-  
   buffer.Clear();
 
   devices.push_back({0x00, Payload::PeripheralState::AVAILABLE, Payload::Peripheral::ROOT});
   devices.push_back({0x01, Payload::PeripheralState::AVAILABLE, Payload::Peripheral::BLE});
 
+  EEPROM.begin(sizeof(_config));
   bleKeyboard.begin();
-  Serial.begin(115200);
+  
+  Load();
 
-  HandleReboot();
+  NimBLEAddress address = NimBLEDevice::getAddress();
+  log("Starting BLE work on [%s] endpoint build %s", address.toString().c_str(), __TIMESTAMP__);
 }
 
 void loop()

@@ -255,6 +255,9 @@ namespace SimpleSerial {
                     _size = HeaderSize + PayloadLength() + sizeof(CRC8Type);
                 }
 
+                // Ready to be send...
+                _offset = 0;
+
                 return crc; 
             }
         };
