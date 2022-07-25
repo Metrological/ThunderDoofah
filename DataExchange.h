@@ -173,8 +173,7 @@ namespace SimpleSerial {
             if (_current == nullptr) {
                 _current = &request;
                 _adminLock.Unlock();
-                
-                _current->Offset(0);
+
                 _channel.Trigger();
                 result = Core::ERROR_NONE;
 
@@ -194,7 +193,6 @@ namespace SimpleSerial {
                 _current = &request;
                 _adminLock.Unlock();
 
-                _current->Offset(0);
                 _exchange.ResetEvent();
 
                 _channel.Trigger();

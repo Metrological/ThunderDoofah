@@ -179,15 +179,6 @@ namespace SimpleSerial {
                 _buffer[2] = static_cast<uint8_t>(address);
             }
 
-            inline uint8_t Offset() const
-            {
-                return (_offset);
-            }
-            inline void Offset(const uint8_t offset)
-            {
-                _offset = offset;
-            }
-
             inline OperationType Operation() const
             {
                 ASSERT(_size >= 1);
