@@ -213,6 +213,8 @@ namespace SimpleSerial {
         {
             uint32_t result = Core::ERROR_NONE;
 
+            TRACE(Trace::Information, ("Complete message Operation=0x%02X", message.Operation()));
+
             if (_current != nullptr) {
                 _current->Deserialize(message.Size(), message.Data());
             }
@@ -250,10 +252,17 @@ namespace SimpleSerial {
         {
             uint16_t consumedData(0);
 
+            string data;
+            Core::ToHexString(dataFrame, availableData, data);
+
+            TRACE(Doofah::DataExchangeFlow, ("Incomming data=%s", data.c_str()));
+
             _adminLock.Lock();
 
             while (consumedData < availableData) {
                 consumedData += _buffer.Deserialize( availableData - consumedData, &dataFrame[consumedData]);
+
+                TRACE(Doofah::DataExchangeFlow, ("consumedData data=%d", consumedData));
 
                 if (_buffer.IsComplete() == true) {
                     if ((_current != nullptr) && (_current->Operation() == _buffer.Operation()) && (_current->Sequence() == _buffer.Sequence())) {
