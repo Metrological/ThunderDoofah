@@ -217,8 +217,8 @@ namespace SimpleSerial {
                 uint8_t result(0);
 
                 if ((length > 0) && (length <= MaxPayloadSize)) {
-                    if (_size < HeaderSize) {
-                        _size = HeaderSize;
+                    if (_size < (HeaderSize + length)) {
+                        _size = (HeaderSize + length);
                     }
 
                     _buffer[3] = static_cast<uint8_t>(length);
