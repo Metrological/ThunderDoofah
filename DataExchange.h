@@ -216,6 +216,7 @@ namespace SimpleSerial {
             TRACE(Trace::Information, ("Complete message Operation=0x%02X", message.Operation()));
 
             if (_current != nullptr) {
+                _current->Clear();
                 _current->Deserialize(message.Size(), message.Data());
             }
 

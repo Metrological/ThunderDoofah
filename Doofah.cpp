@@ -62,7 +62,7 @@ namespace Plugin {
             } else if (config.Peripheral.IsSet()) {
                 WPEFramework::Doofah::SerialCommunicator::DeviceIterator devices = _communicator.Devices();
 
-                if (devices.IsValid()) {
+                if (devices.Count() > 0) {
                     while ((devices.Next() == true) && (_endpoint != uint8_t(~0))) {
                         if ((devices.Current().peripheral == config.Peripheral.Value()) && devices.Current().state != WPEFramework::SimpleSerial::Payload::PeripheralState::OCCUPIED) {
                             _endpoint = (_communicator.Allocate(devices.Current().address) == Core::ERROR_NONE) ? devices.Current().address : uint8_t(~0);

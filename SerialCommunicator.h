@@ -257,7 +257,7 @@ namespace Doofah {
                 }
 
                 if (config.Name.IsSet()) {
-                    uint8_t copyLength = std::min(config.Name.Value().size(), SimpleSerial::Protocol::MaxPayloadSize - (sizeof(payload) - sizeof(payload.name)));
+                    uint8_t copyLength = std::min(static_cast<uint8_t>(config.Name.Value().size()), static_cast<uint8_t>(SimpleSerial::Protocol::MaxPayloadSize - (sizeof(payload) - sizeof(payload.name))));
                     memcpy(&payload.vid, config.Name.Value().c_str(), copyLength);
                 }
 
@@ -292,7 +292,36 @@ namespace Doofah {
 
         virtual ~SerialCommunicator() = default;
 
-        typedef Core::IteratorType<const std::list<SimpleSerial::Payload::Device>, const SimpleSerial::Payload::Device&, std::list<SimpleSerial::Payload::Device>::const_iterator> DeviceIterator;
+        class EXTERNAL DeviceIterator : public Core::IteratorType<const std::list<SimpleSerial::Payload::Device>, const SimpleSerial::Payload::Device&, std::list<SimpleSerial::Payload::Device>::const_iterator> {
+        private:
+            using BaseClass = Core::IteratorType<const std::list<SimpleSerial::Payload::Device>, const SimpleSerial::Payload::Device&, std::list<SimpleSerial::Payload::Device>::const_iterator>;
+
+        public:
+            DeviceIterator()
+                : BaseClass()
+                , _container() {
+                Container(_container);
+            }
+            DeviceIterator(std::list<SimpleSerial::Payload::Device>&& rhs) 
+                : BaseClass()
+                , _container(rhs) {
+                Container(_container);
+            }
+            DeviceIterator(const DeviceIterator& rhs)
+                : BaseClass()
+                , _container(rhs._container) {
+                Container(_container);
+            }
+            DeviceIterator(DeviceIterator&& rhs)
+                : BaseClass()
+                , _container(rhs._container) {
+                Container(_container);
+            }
+            ~DeviceIterator() override = default;
+
+        private:
+            std::list<SimpleSerial::Payload::Device> _container;
+        };
 
         uint32_t Initialize(const std::string& config);
         void Deinitialize();

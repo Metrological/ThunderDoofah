@@ -111,7 +111,7 @@ namespace Doofah {
             TRACE(Trace::Information, ("Got %d devices", devices.size()));
         }
 
-        return DeviceIterator(devices);
+        return DeviceIterator(std::move(devices));
     }
 
     void SerialCommunicator::Received(const SimpleSerial::Protocol::Message& message)

@@ -124,7 +124,7 @@ namespace SimpleSerial {
                     if ((_size >= HeaderSize) && (result < length)) {
                         uint8_t copyLength = std::min(uint8_t(length - result), uint8_t(_size - HeaderSize + PayloadLength() + sizeof(CRC8Type)));
 
-                        std::memcpy(&_buffer[_size], data, copyLength);
+                        std::memcpy(&_buffer[_size], &(data[result]), copyLength);
 
                         _size += copyLength;
                         result += copyLength;
@@ -135,7 +135,7 @@ namespace SimpleSerial {
             }
             uint16_t Serialize(uint16_t length, uint8_t data[]) const
             {
-                uint8_t copyLength = std::min(length, uint16_t(_size - _offset));
+                uint16_t copyLength = std::min(length, uint16_t(_size - _offset));
 
                 ASSERT(IsComplete() == true);
 
