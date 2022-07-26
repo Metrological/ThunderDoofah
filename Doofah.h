@@ -27,6 +27,8 @@
 
 #include "SerialCommunicator.h"
 
+using namespace WPEFramework::SimpleSerial;
+
 namespace WPEFramework {
 namespace Plugin {
     class Doofah : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
@@ -75,7 +77,31 @@ namespace Plugin {
             Core::JSON::HexUInt32 Code;
         };
 
+    private:
+        class ResetBody : public Core::JSON::Container {
+        private:
+            ResetBody& operator=(const ResetBody&) = delete;
+
+        public:
+            inline ResetBody()
+                : Core::JSON::Container()
+            {
+                Add(_T("peripheral"), &Peripheral);
+            }
+            inline ResetBody(const ResetBody& copy)
+                : Core::JSON::Container()
+                , Peripheral(copy.Peripheral)
+            {
+                Add(_T("peripheral"), &Peripheral);
+            }
+            ~ResetBody() override = default;
+
+        public:
+            Core::JSON::EnumType<Payload::Peripheral> Peripheral;
+        };
+
         bool ParseKeyCodeBody(const Web::Request& request, uint32_t& code);
+        bool ParseResetBody(const Web::Request& request, Payload::Peripheral& peripheral);
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
 
     public:
@@ -89,7 +115,7 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , Connector()
                 , Device(~0)
-                , Peripheral(SimpleSerial::Payload::Peripheral::ROOT)
+                , Peripheral(Payload::Peripheral::ROOT)
             {
                 Add(_T("connector"), &Connector);
                 Add(_T("device"), &Device);
@@ -102,7 +128,7 @@ namespace Plugin {
         public:
             Core::JSON::String Connector;
             Core::JSON::DecUInt8 Device;
-            Core::JSON::EnumType<SimpleSerial::Payload::Peripheral> Peripheral;
+            Core::JSON::EnumType<Payload::Peripheral> Peripheral;
         };
 
     public:

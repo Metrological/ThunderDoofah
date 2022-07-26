@@ -27,6 +27,7 @@ ENUM_CONVERSION_BEGIN(SimpleSerial::Payload::Peripheral) { SimpleSerial::Payload
     { SimpleSerial::Payload::Peripheral::BLE, _TXT("ble") },
     { SimpleSerial::Payload::Peripheral::IR, _TXT("ir") },
     ENUM_CONVERSION_END(SimpleSerial::Payload::Peripheral);
+
 namespace Plugin {
     static Core::ProxyPoolType<Web::TextBody> _textBodies(2);
     namespace {
@@ -119,6 +120,24 @@ namespace Plugin {
         return parsed;
     }
 
+    bool Doofah::ParseResetBody(const Web::Request& request, Payload::Peripheral& peripheral)
+    {
+        bool parsed = false;
+        const string payload = ((request.HasBody() == true) ? string(*request.Body<const Web::TextBody>()) : "");
+
+        if (payload.empty() == false) {
+            Doofah::ResetBody data;
+            data.FromString(payload);
+
+            if (data.Peripheral.IsSet() == true) {
+                peripheral = data.Peripheral.Value();
+            }
+            parsed = true;
+        }
+
+        return parsed;
+    }
+
     Core::ProxyType<Web::Response> Doofah::PutMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
         Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
@@ -156,13 +175,28 @@ namespace Plugin {
                     result->Message = string(_T("Setup failed"));
                 }
             } else if (index.Current() == _T("Reset")) {
-                if ((commResult = _communicator.Reset(_endpoint) == Core::ERROR_NONE)) {
-                    result->ErrorCode = Web::STATUS_OK;
-                    result->Message = string(_T("Reset OK"));
+                Payload::Peripheral peripheral;
+
+                if ((ParseResetBody(request, peripheral) == true) && (peripheral == Payload::Peripheral::ROOT)) {
+                    if ((commResult = _communicator.Reset(0x00) == Core::ERROR_NONE)) {
+                        result->ErrorCode = Web::STATUS_ACCEPTED;
+                        result->Message = string((_T("reset ok")));
+                    } else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = string(_T("failed to reset"));
+                    }
                 } else {
-                    result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
-                    result->Message = string(_T("Reset failed"));
+                    if ((commResult = _communicator.Reset(_endpoint) == Core::ERROR_NONE)) {
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = string(_T("Reset OK"));
+                    } else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = string(_T("Reset failed"));
+                    }
                 }
+            } else {
+                result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+                result->Message = string(_T("Reset failed"));
             }
         }
         return (result);
