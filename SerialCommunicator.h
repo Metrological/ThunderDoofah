@@ -205,7 +205,7 @@ namespace Doofah {
 
             const SimpleSerial::Payload::Device* Current()
             {
-                return (IsValidPayload() == true) ? nullptr : reinterpret_cast<const SimpleSerial::Payload::Device*>(Payload() + _offset);
+                return (IsValidPayload() == true) ? reinterpret_cast<const SimpleSerial::Payload::Device*>(Payload() + _offset) : nullptr;
             }
 
         private:
