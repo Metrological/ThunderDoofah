@@ -54,7 +54,7 @@ namespace Doofah {
         if (_channel.IsOpen() == true) {
             _channel.Flush();
         }
-        
+
         TRACE(Trace::Information, ("Configured SerialCommunicator[%s]: %s", _channel.RemoteId().c_str(), _channel.IsOpen() ? "succesful" : "failed"));
 
         return result;
@@ -90,12 +90,12 @@ namespace Doofah {
 
         uint32_t result = _channel.Post(message, 1000);
 
-        if ((result == Core::ERROR_NONE) && (message.Result() != SimpleSerial::Protocol::ResultType::OK)) {
+        if (result != Core::ERROR_NONE) {
+            TRACE(Trace::Error, ("Post Failed: %d", result))
+        } else if ((result == Core::ERROR_NONE) && (message.Result() != SimpleSerial::Protocol::ResultType::OK)) {
             TRACE(Trace::Error, ("Exchange Failed: %d", static_cast<uint8_t>(message.Result())));
             result = Core::ERROR_GENERAL;
-        }
-
-        if (result == Core::ERROR_NONE) {
+        } else {
             message.Reset();
 
             while ((message.Next() == true) && (message.Current() != nullptr)) {
@@ -107,9 +107,9 @@ namespace Doofah {
 
                 devices.push_back(device);
             }
-        }
 
-        TRACE(Trace::Information, ("Got %d devices", devices.size()));
+            TRACE(Trace::Information, ("Got %d devices", devices.size()));
+        }
 
         return DeviceIterator(devices);
     }
