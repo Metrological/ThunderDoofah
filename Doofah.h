@@ -183,7 +183,7 @@ namespace Plugin {
         uint8_t _skipURL;
         WPEFramework::Doofah::SerialCommunicator _communicator;
         Sink _sink;
-        PluginHost::IShell* _service
+        PluginHost::IShell* _service;
     };
 } // namespace Plugin
 } // namespace WPEFramework
