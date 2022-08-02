@@ -124,9 +124,14 @@ namespace Plugin {
         });
     }
 
-    // Event: started - Notifies when the endpoint is ready after a (re)start. 
+    // Event: started - Notifies when the endpoint is ready after a (re)start.
     void Doofah::EventStarted()
     {
+        string message("{ \"event\": \"started\" }");
+        if (_service != nullptr) {
+            _service->Notify(message);
+        }
+
         Notify(_T("started"));
     }
 } // namespace Plugin
