@@ -124,62 +124,50 @@ namespace Doofah {
             Core::JSON::String IR;
         };
 
-        class ResourceMessage : public SimpleSerial::Protocol::Message {
+        class Message : public SimpleSerial::Protocol::Message {
         public:
-            ResourceMessage() = delete;
-            ResourceMessage(const ResourceMessage&) = delete;
-            ResourceMessage& operator=(const ResourceMessage&) = delete;
+            Message() = delete;
+            Message(const Message&) = delete;
+            Message& operator=(const Message&) = delete;
 
-            ResourceMessage(const SimpleSerial::Protocol::DeviceAddressType address, const bool aquire)
+            Message(const SimpleSerial::Protocol::OperationType operation, const SimpleSerial::Protocol::DeviceAddressType address)
             {
                 Clear();
 
-                Operation(aquire ? SimpleSerial::Protocol::OperationType::ALLOCATE : SimpleSerial::Protocol::OperationType::FREE);
+                Operation(operation);
                 Sequence(SimpleSerial::GetSequence());
                 Address(address);
-                PayloadLength(0);
             }
         };
 
-        class KeyMessage : public SimpleSerial::Protocol::Message {
+        class KeyMessage : public Message {
         public:
             KeyMessage() = delete;
             KeyMessage(const KeyMessage&) = delete;
             KeyMessage& operator=(const KeyMessage&) = delete;
 
             KeyMessage(const SimpleSerial::Protocol::DeviceAddressType address, const uint16_t keyCode, const bool pressed)
+                : Message(SimpleSerial::Protocol::OperationType::KEY, address)
             {
                 SimpleSerial::Payload::KeyEvent payload;
 
                 payload.pressed = (pressed == true) ? SimpleSerial::Payload::Action::PRESSED : SimpleSerial::Payload::Action::RELEASED;
                 payload.code = keyCode;
 
-                Clear();
-
-                Operation(SimpleSerial::Protocol::OperationType::KEY);
-                Sequence(SimpleSerial::GetSequence());
-                Address(address);
-                PayloadLength(sizeof(payload));
-
-                Deserialize(sizeof(payload), reinterpret_cast<uint8_t*>(&payload));
+                Payload(sizeof(payload), reinterpret_cast<uint8_t*>(&payload));
             }
         };
 
-        class StateMessage : public SimpleSerial::Protocol::Message {
+        class StateMessage : public Message {
         public:
             StateMessage() = delete;
             StateMessage(const StateMessage&) = delete;
             StateMessage& operator=(const StateMessage&) = delete;
 
             StateMessage(const SimpleSerial::Protocol::DeviceAddressType address)
-                : _offset(~0)
+                : Message(SimpleSerial::Protocol::OperationType::STATE, address)
+                , _offset(~0)
             {
-                Clear();
-
-                Operation(SimpleSerial::Protocol::OperationType::STATE);
-                Sequence(SimpleSerial::GetSequence());
-                Address(address);
-                PayloadLength(0);
             }
 
             inline bool IsValidPayload() const
@@ -212,24 +200,14 @@ namespace Doofah {
             uint8_t _offset;
         };
 
-        class SettingsMessage : public SimpleSerial::Protocol::Message {
-        private:
-            SettingsMessage(const SimpleSerial::Protocol::DeviceAddressType address, const uint8_t length, const uint8_t payload[])
-            {
-                Clear();
-
-                Operation(SimpleSerial::Protocol::OperationType::SETTINGS);
-                Sequence(SimpleSerial::GetSequence());
-                Address(address);
-                Payload(length, payload);
-            }
-
+        class SettingsMessage : public Message {
         public:
             SettingsMessage() = delete;
             SettingsMessage(const SettingsMessage&) = delete;
             SettingsMessage& operator=(const SettingsMessage&) = delete;
 
             SettingsMessage(const SimpleSerial::Protocol::DeviceAddressType address, const IRConfig& config)
+                : Message(SimpleSerial::Protocol::OperationType::SETTINGS, address)
             {
                 SimpleSerial::Payload::IRSettings payload;
 
@@ -239,10 +217,11 @@ namespace Doofah {
                     payload.carrier_hz = config.CarrierHz.Value();
                 }
 
-                SettingsMessage(address, sizeof(payload), reinterpret_cast<uint8_t*>(&payload));
+                Payload(sizeof(payload), reinterpret_cast<uint8_t*>(&payload));
             }
 
             SettingsMessage(const SimpleSerial::Protocol::DeviceAddressType address, const BLEConfig& config)
+                : Message(SimpleSerial::Protocol::OperationType::SETTINGS, address)
             {
                 SimpleSerial::Payload::BLESettings payload;
 
@@ -261,30 +240,33 @@ namespace Doofah {
                     memcpy(&payload.vid, config.Name.Value().c_str(), copyLength);
                 }
 
-                SettingsMessage(address, sizeof(payload), reinterpret_cast<uint8_t*>(&payload));
+                Payload(sizeof(payload), reinterpret_cast<uint8_t*>(&payload));
             }
         };
 
-        class ResetMessage : public SimpleSerial::Protocol::Message {
+        class ResetMessage : public Message {
         public:
             ResetMessage() = delete;
-            ResetMessage(const SettingsMessage&) = delete;
-            ResetMessage& operator=(const SettingsMessage&) = delete;
+            ResetMessage(const ResetMessage&) = delete;
+            ResetMessage& operator=(const ResetMessage&) = delete;
 
             ResetMessage(const SimpleSerial::Protocol::DeviceAddressType address)
+                : Message(SimpleSerial::Protocol::OperationType::RESET, address)
             {
-                Clear();
-
-                Operation(SimpleSerial::Protocol::OperationType::RESET);
-                Sequence(SimpleSerial::GetSequence());
-                Address(address);
-                PayloadLength(0);
             }
         };
 
     public:
+        struct ICallback {
+            virtual ~ICallback() = default;
+            // @brief Signals that the endpoint is started
+            virtual void Started() = 0;
+        };
+
         SerialCommunicator()
-            : _channel(*this)
+            : _adminLock()
+            , _channel(*this)
+            , _callback(nullptr)
         {
         }
         SerialCommunicator(const SerialCommunicator&) = delete;
@@ -337,6 +319,8 @@ namespace Doofah {
         uint32_t Reset(const SimpleSerial::Protocol::DeviceAddressType address);
         uint32_t Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config);
 
+        void Callback(ICallback* callback);
+
     private:
         class Channel : public SimpleSerial::DataExchange<Core::SerialPort> {
         private:
@@ -371,7 +355,9 @@ namespace Doofah {
         typedef std::map<string, SimpleSerial::Protocol::DeviceAddressType> DeviceMap;
 
     private:
-        Channel _channel;
+        mutable Core::CriticalSection _adminLock;
+        mutable Channel _channel;
+        ICallback* _callback;
     }; // class SerialCommunicator
 } // namespace plugin
 } // namespace WPEFramework

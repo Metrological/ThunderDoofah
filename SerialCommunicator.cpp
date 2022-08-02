@@ -30,6 +30,14 @@ ENUM_CONVERSION_BEGIN(Core::SerialPort::FlowControl) { Core::SerialPort::OFF, _T
     ENUM_CONVERSION_END(Core::SerialPort::FlowControl);
 
 namespace Doofah {
+    void SerialCommunicator::Callback(ICallback* callback)
+    {
+        _adminLock.Lock();
+        ASSERT((callback == nullptr) ^ (_callback == nullptr));
+        _callback = callback;
+        _adminLock.Unlock();
+    }
+
     uint32_t SerialCommunicator::Initialize(const string& configuration)
     {
         uint32_t result = Core::ERROR_NONE;
