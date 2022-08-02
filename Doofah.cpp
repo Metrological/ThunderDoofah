@@ -47,6 +47,7 @@ namespace Plugin {
     /* virtual */ const string Doofah::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
+        ASSERT(_service == nullptr);
 
         string message;
         Config config;
@@ -54,18 +55,24 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
+        _service = service;
+
         JSONRPCRegister();
+
+        _communicator.Callback(&_sink);
 
         uint32_t result = _communicator.Initialize(config.Connector.Value());
 
-        if (result != Core::ERROR_NONE) {
-            message = "Could not setup communication channel";
-        } else {
+        if (result == Core::ERROR_NONE) {
+            result = _communicator.Reset(0x00); // reset the endpoint
+
             if (result != Core::ERROR_NONE) {
-                result = _communicator.Reset(0x00); // reset the endpoint
-            } else {
+                TRACE(Trace::Error, ("Reset Failed 0x%04X", result));
                 message = "Could not reset the end-point";
             }
+        } else {
+            TRACE(Trace::Error, ("Initialize Failed 0x%04X", result));
+            message = "Could not setup communication channel";
         }
 
         if (message.empty() == false) {
@@ -79,7 +86,11 @@ namespace Plugin {
     {
         JSONRPCUnregister();
 
+        _communicator.Callback(nullptr);
         _communicator.Deinitialize();
+
+        ASSERT(_service == service);
+        _service = nullptr;
     }
 
     /* virtual */ string Doofah::Information() const

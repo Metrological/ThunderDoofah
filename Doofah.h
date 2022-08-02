@@ -33,7 +33,6 @@ namespace Plugin {
     using namespace JsonData::Doofah;
 
     class Doofah : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
-
     public:
         Doofah(const Doofah&) = delete;
         Doofah& operator=(const Doofah&) = delete;
@@ -41,6 +40,8 @@ namespace Plugin {
         Doofah()
             : _skipURL(0)
             , _communicator()
+            , _sink(*this)
+            , _service(nullptr)
         {
         }
 
@@ -61,6 +62,28 @@ namespace Plugin {
 
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
+
+        class Sink : public WPEFramework::Doofah::SerialCommunicator::ICallback {
+        private:
+            Sink(const Sink&) = delete;
+            Sink& operator=(const Sink&) = delete;
+            Sink() = delete;
+
+        public:
+            Sink(Doofah& parent)
+                : _parent(parent)
+            {
+            }
+
+            void Started()
+            {
+                TRACE(Trace::Information, ("End-point started!"));
+                _parent.EventStarted();
+            }
+
+        private:
+            Doofah& _parent;
+        };
 
     public:
         class Config : public Core::JSON::Container {
@@ -153,12 +176,14 @@ namespace Plugin {
         uint32_t JSONRPCKeyRelease(const KeyInfo& params);
 
         void EventKeyPressed(const string& id, const bool& pressed);
-        
+
         void EventStarted();
 
     private:
         uint8_t _skipURL;
         WPEFramework::Doofah::SerialCommunicator _communicator;
+        Sink _sink;
+        PluginHost::IShell* _service
     };
 } // namespace Plugin
 } // namespace WPEFramework
