@@ -21,16 +21,17 @@
 
 #include "Module.h"
 
-#include <interfaces/json/JsonData_RemoteControl.h>
+#include "JsonData_Doofah.h"
 
 #include "SimpleSerial.h"
 
 #include "SerialCommunicator.h"
 
-using namespace WPEFramework::SimpleSerial;
-
 namespace WPEFramework {
 namespace Plugin {
+    using namespace WPEFramework::SimpleSerial;
+    using namespace JsonData::Doofah;
+
     class Doofah : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
 
     public:
@@ -40,7 +41,6 @@ namespace Plugin {
         Doofah()
             : _skipURL(0)
             , _communicator()
-            , _endpoint(0)
         {
         }
 
@@ -55,53 +55,11 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        class KeyCodeBody : public Core::JSON::Container {
-        private:
-            KeyCodeBody& operator=(const KeyCodeBody&) = delete;
+        bool ParseSetupBody(const Web::Request& request, Protocol::DeviceAddressType& address, string& setup);
+        bool ParseKeyCodeBody(const Web::Request& request, Protocol::DeviceAddressType& address, uint32_t& code);
+        bool ParseDeviceAddressBody(const Web::Request& request, Protocol::DeviceAddressType& address);
 
-        public:
-            inline KeyCodeBody()
-                : Core::JSON::Container()
-            {
-                Add(_T("code"), &Code);
-            }
-            inline KeyCodeBody(const KeyCodeBody& copy)
-                : Core::JSON::Container()
-                , Code(copy.Code)
-            {
-                Add(_T("code"), &Code);
-            }
-            ~KeyCodeBody() override = default;
-
-        public:
-            Core::JSON::HexUInt32 Code;
-        };
-
-    private:
-        class ResetBody : public Core::JSON::Container {
-        private:
-            ResetBody& operator=(const ResetBody&) = delete;
-
-        public:
-            inline ResetBody()
-                : Core::JSON::Container()
-            {
-                Add(_T("peripheral"), &Peripheral);
-            }
-            inline ResetBody(const ResetBody& copy)
-                : Core::JSON::Container()
-                , Peripheral(copy.Peripheral)
-            {
-                Add(_T("peripheral"), &Peripheral);
-            }
-            ~ResetBody() override = default;
-
-        public:
-            Core::JSON::EnumType<Payload::Peripheral> Peripheral;
-        };
-
-        bool ParseKeyCodeBody(const Web::Request& request, uint32_t& code);
-        bool ParseResetBody(const Web::Request& request, Payload::Peripheral& peripheral);
+        Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
 
     public:
@@ -131,6 +89,44 @@ namespace Plugin {
             Core::JSON::EnumType<Payload::Peripheral> Peripheral;
         };
 
+        static void FillDeviceInfo(const Payload::Device& info, DeviceEntry& entry)
+        {
+            entry.Address = info.address;
+            entry.Peripheral = info.peripheral;
+        }
+
+        class DeviceList : public Core::JSON::Container {
+        public:
+            DeviceList(const DeviceList&) = delete;
+            DeviceList& operator=(const DeviceList&) = delete;
+
+        public:
+            DeviceList()
+                : Core::JSON::Container()
+                , Devices()
+            {
+                Add(_T("devices"), &Devices);
+            }
+
+            ~DeviceList() override = default;
+
+        public:
+            void Set(WPEFramework::Doofah::SerialCommunicator::DeviceIterator& list)
+            {
+                list.Reset(0);
+
+                while (list.Next() == true) {
+                    DeviceEntry device;
+
+                    Doofah::FillDeviceInfo(list.Current(), device);
+
+                    Devices.Add(device);
+                }
+            }
+
+            Core::JSON::ArrayType<DeviceEntry> Devices;
+        };
+
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
@@ -145,18 +141,24 @@ namespace Plugin {
 
         // JSON RPC
         // -------------------------------------------------------------------------------------------------------
-        void RegisterAll();
-        void UnregisterAll();
+        void JSONRPCRegister();
+        void JSONRPCUnregister();
 
-        uint32_t endpoint_press(const JsonData::RemoteControl::KeyobjInfo& params);
-        uint32_t endpoint_release(const JsonData::RemoteControl::KeyobjInfo& params);
+        uint32_t JSONRPCDevices(Core::JSON::ArrayType<DeviceEntry>& response) const;
 
-        void event_keypressed(const string& id, const bool& pressed);
+        uint32_t JSONRPCSetup(const SetupInfo& params);
+        uint32_t JSONRPCReset(const AddressInfo& params);
+
+        uint32_t JSONRPCKeyPress(const KeyInfo& params);
+        uint32_t JSONRPCKeyRelease(const KeyInfo& params);
+
+        void EventKeyPressed(const string& id, const bool& pressed);
+        
+        void EventStarted();
 
     private:
         uint8_t _skipURL;
         WPEFramework::Doofah::SerialCommunicator _communicator;
-        SimpleSerial::Protocol::DeviceAddressType _endpoint;
     };
 } // namespace Plugin
 } // namespace WPEFramework

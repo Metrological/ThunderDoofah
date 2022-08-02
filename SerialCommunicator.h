@@ -312,12 +312,12 @@ namespace Doofah {
         uint32_t Initialize(const std::string& config);
         void Deinitialize();
 
-        DeviceIterator Devices();
+        DeviceIterator Devices() const;
 
-        uint32_t KeyEvent(const SimpleSerial::Protocol::DeviceAddressType address, const bool pressed, const uint16_t code);
+        uint32_t KeyEvent(const SimpleSerial::Protocol::DeviceAddressType address, const bool pressed, const uint16_t code) const;
 
-        uint32_t Reset(const SimpleSerial::Protocol::DeviceAddressType address);
-        uint32_t Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config);
+        uint32_t Reset(const SimpleSerial::Protocol::DeviceAddressType address) const;
+        uint32_t Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config) const;
 
         void Callback(ICallback* callback);
 

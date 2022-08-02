@@ -42,6 +42,8 @@ namespace Plugin {
             {});
     }
 
+    static Core::ProxyPoolType<Web::JSONBodyType<Doofah::DeviceList>> jsonResponseFactoryDevicesList(1);
+
     /* virtual */ const string Doofah::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
@@ -52,32 +54,18 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        RegisterAll();
+        JSONRPCRegister();
 
         uint32_t result = _communicator.Initialize(config.Connector.Value());
 
-        if (result == Core::ERROR_NONE) {
-            if (config.Device.IsSet()) {
-                _endpoint = (_communicator.Allocate(config.Device.Value()) == Core::ERROR_NONE) ? config.Device.Value() : uint8_t(~0);
-            } else if (config.Peripheral.IsSet()) {
-                WPEFramework::Doofah::SerialCommunicator::DeviceIterator devices = _communicator.Devices();
-
-                if (devices.Count() > 0) {
-                    while ((devices.Next() == true) && (_endpoint != uint8_t(~0))) {
-                        if ((devices.Current().peripheral == config.Peripheral.Value()) && devices.Current().state != WPEFramework::SimpleSerial::Payload::PeripheralState::OCCUPIED) {
-                            _endpoint = (_communicator.Allocate(devices.Current().address) == Core::ERROR_NONE) ? devices.Current().address : uint8_t(~0);
-                        }
-                    }
-                } else {
-                    message = "Failed to aquire remote devices";
-                }
-            }
-
-            if (_endpoint == uint8_t(~0)) {
-                message = "Failed to aquire endpoint";
-            }
-        } else {
+        if (result != Core::ERROR_NONE) {
             message = "Could not setup communication channel";
+        } else {
+            if (result != Core::ERROR_NONE) {
+                result = _communicator.Reset(0x00); // reset the endpoint
+            } else {
+                message = "Could not reset the end-point";
+            }
         }
 
         if (message.empty() == false) {
@@ -89,10 +77,8 @@ namespace Plugin {
 
     /* virtual */ void Doofah::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        UnregisterAll();
-        if (_endpoint != uint8_t(~0)) {
-            _communicator.Release(_endpoint);
-        }
+        JSONRPCUnregister();
+
         _communicator.Deinitialize();
     }
 
@@ -102,17 +88,38 @@ namespace Plugin {
         return (string());
     }
 
-    bool Doofah::ParseKeyCodeBody(const Web::Request& request, uint32_t& code)
+    bool Doofah::ParseSetupBody(const Web::Request& request, Protocol::DeviceAddressType& address, string& setup)
     {
         bool parsed = false;
         const string payload = ((request.HasBody() == true) ? string(*request.Body<const Web::TextBody>()) : "");
 
         if (payload.empty() == false) {
-            Doofah::KeyCodeBody data;
+            JsonData::Doofah::SetupInfo data;
             data.FromString(payload);
 
-            if (data.Code.IsSet() == true) {
+            if ((data.Device.IsSet() == true) && (data.Configuration.IsSet() == true)) {
+                address = data.Device.Value();
+                setup = data.Configuration.Value();
+            }
+
+            parsed = true;
+        }
+
+        return parsed;
+    }
+
+    bool Doofah::ParseKeyCodeBody(const Web::Request& request, Protocol::DeviceAddressType& address, uint32_t& code)
+    {
+        bool parsed = false;
+        const string payload = ((request.HasBody() == true) ? string(*request.Body<const Web::TextBody>()) : "");
+
+        if (payload.empty() == false) {
+            JsonData::Doofah::KeyInfo data;
+            data.FromString(payload);
+
+            if ((data.Code.IsSet() == true) && (data.Device.IsSet() == true)) {
                 code = data.Code.Value();
+                address = data.Device.Value();
             }
             parsed = true;
         }
@@ -120,22 +127,50 @@ namespace Plugin {
         return parsed;
     }
 
-    bool Doofah::ParseResetBody(const Web::Request& request, Payload::Peripheral& peripheral)
+    bool Doofah::ParseDeviceAddressBody(const Web::Request& request, Protocol::DeviceAddressType& address)
     {
         bool parsed = false;
         const string payload = ((request.HasBody() == true) ? string(*request.Body<const Web::TextBody>()) : "");
 
         if (payload.empty() == false) {
-            Doofah::ResetBody data;
+            JsonData::Doofah::AddressInfo data;
             data.FromString(payload);
 
-            if (data.Peripheral.IsSet() == true) {
-                peripheral = data.Peripheral.Value();
+            if (data.Address.IsSet() == true) {
+                address = data.Address.Value();
             }
             parsed = true;
         }
 
         return parsed;
+    }
+
+    Core::ProxyType<Web::Response> Doofah::GetMethod(Core::TextSegmentIterator& index)
+    {
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
+
+        result->ErrorCode = Web::STATUS_NOT_FOUND;
+        result->Message = string(_T("Unknown request path specified."));
+
+        if (index.IsValid() == true && index.Next() == true) {
+            // GET .../Doofah/ADRRESS : Get config of a specific device of the end-point
+            // TODO: return config for a specific peripheral.
+            result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+            result->Message = string(_T("TODO: return config for a specific device."));
+        } else {
+            // GET .../Doofah : Get all devices provided by an end-point
+            WPEFramework::Doofah::SerialCommunicator::DeviceIterator list = _communicator.Devices();
+
+            Core::ProxyType<Web::JSONBodyType<Doofah::DeviceList>> devices(jsonResponseFactoryDevicesList.Element());
+
+            devices->Set(list);
+
+            result->ErrorCode = Web::STATUS_ACCEPTED;
+            result->Message = string((_T("Returned Devices")));
+            result->Body(devices);
+        }
+
+        return (result);
     }
 
     Core::ProxyType<Web::Response> Doofah::PutMethod(Core::TextSegmentIterator& index, const Web::Request& request)
@@ -149,13 +184,14 @@ namespace Plugin {
 
         if (index.IsValid() == true && index.Next() == true) {
             bool pressed = false;
+            Protocol::DeviceAddressType address(Protocol::InvalidAddress);
 
             // PUT .../Doofah/Press|Release : send a code to the end point
             if (((pressed = (index.Current() == _T("Press"))) == true) || (index.Current() == _T("Release"))) {
                 uint32_t code = 0;
 
-                if (ParseKeyCodeBody(request, code) == true) {
-                    if ((code != 0) && (commResult = _communicator.KeyEvent(_endpoint, pressed, code) == Core::ERROR_NONE)) {
+                if (ParseKeyCodeBody(request, address, code) == true) {
+                    if ((address != Protocol::InvalidAddress) && (code != 0) && (commResult = _communicator.KeyEvent(address, pressed, code) == Core::ERROR_NONE)) {
                         result->ErrorCode = Web::STATUS_ACCEPTED;
                         result->Message = string((_T("key is sent")));
                     } else {
@@ -164,34 +200,30 @@ namespace Plugin {
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                    result->Message = string(_T("No key code in body"));
+                    result->Message = string(_T("No key code or/and device address in body"));
                 }
             } else if (index.Current() == _T("Setup")) {
-                if ((commResult = _communicator.Setup(_endpoint, (request.HasBody() == true) ? string(*request.Body<const Web::TextBody>()) : "") == Core::ERROR_NONE)) {
-                    result->ErrorCode = Web::STATUS_OK;
-                    result->Message = string(_T("Setup OK"));
+                string config;
+                if (ParseSetupBody(request, address, config) == true) {
+                    if ((address != Protocol::InvalidAddress) && (commResult = _communicator.Setup(address, config) == Core::ERROR_NONE)) {
+                        result->ErrorCode = Web::STATUS_ACCEPTED;
+                        result->Message = string((_T("setup ok")));
+                    } else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = string(_T("failed to setup "));
+                    }
                 } else {
-                    result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
-                    result->Message = string(_T("Setup failed"));
+                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                    result->Message = string(_T("No config or/and device address in body"));
                 }
             } else if (index.Current() == _T("Reset")) {
-                Payload::Peripheral peripheral;
-
-                if ((ParseResetBody(request, peripheral) == true) && (peripheral == Payload::Peripheral::ROOT)) {
-                    if ((commResult = _communicator.Reset(0x00) == Core::ERROR_NONE)) {
+                if ((address != Protocol::InvalidAddress) && (ParseDeviceAddressBody(request, address) == true)) {
+                    if ((commResult = _communicator.Reset(address) == Core::ERROR_NONE)) {
                         result->ErrorCode = Web::STATUS_ACCEPTED;
                         result->Message = string((_T("reset ok")));
                     } else {
                         result->ErrorCode = Web::STATUS_BAD_REQUEST;
                         result->Message = string(_T("failed to reset"));
-                    }
-                } else {
-                    if ((commResult = _communicator.Reset(_endpoint) == Core::ERROR_NONE)) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = string(_T("Reset OK"));
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = string(_T("Reset failed"));
                     }
                 }
             } else {
@@ -220,6 +252,8 @@ namespace Plugin {
         // If there is nothing or only a slashe, we will now jump over it, and otherwise, we have data.
         if (request.Verb == Web::Request::HTTP_PUT) {
             result = PutMethod(index, request);
+        } else if (request.Verb == Web::Request::HTTP_GET) {
+            result = GetMethod(index);
         } else {
             result = PluginHost::IFactories::Instance().Response();
             result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;

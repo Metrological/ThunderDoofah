@@ -76,7 +76,7 @@ namespace Doofah {
         }
     }
 
-    uint32_t SerialCommunicator::KeyEvent(const SimpleSerial::Protocol::DeviceAddressType address, const bool pressed, const uint16_t code)
+    uint32_t SerialCommunicator::KeyEvent(const SimpleSerial::Protocol::DeviceAddressType address, const bool pressed, const uint16_t code) const
     {
         KeyMessage message(address, code, pressed);
 
@@ -90,7 +90,7 @@ namespace Doofah {
         return result;
     }
 
-    SerialCommunicator::DeviceIterator SerialCommunicator::Devices()
+    SerialCommunicator::DeviceIterator SerialCommunicator::Devices() const
     {
         std::list<SimpleSerial::Payload::Device> devices;
 
@@ -130,7 +130,7 @@ namespace Doofah {
         TRACE(Trace::Information, ("Received data: %s", data.c_str()));
     }
 
-    uint32_t SerialCommunicator::Reset(const SimpleSerial::Protocol::DeviceAddressType address)
+    uint32_t SerialCommunicator::Reset(const SimpleSerial::Protocol::DeviceAddressType address) const
     {
         uint32_t result(Core::ERROR_NONE);
 
@@ -147,7 +147,7 @@ namespace Doofah {
 
         return result;
     }
-    uint32_t SerialCommunicator::Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config)
+    uint32_t SerialCommunicator::Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config) const
     {
         uint32_t bleResult(Core::ERROR_NONE);
         uint32_t irResult(Core::ERROR_NONE);
