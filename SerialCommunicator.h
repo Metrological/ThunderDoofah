@@ -299,22 +299,26 @@ namespace Doofah {
         public:
             DeviceIterator()
                 : BaseClass()
-                , _container() {
+                , _container()
+            {
                 Container(_container);
             }
-            DeviceIterator(std::list<SimpleSerial::Payload::Device>&& rhs) 
+            DeviceIterator(std::list<SimpleSerial::Payload::Device>&& rhs)
                 : BaseClass()
-                , _container(rhs) {
+                , _container(rhs)
+            {
                 Container(_container);
             }
             DeviceIterator(const DeviceIterator& rhs)
                 : BaseClass()
-                , _container(rhs._container) {
+                , _container(rhs._container)
+            {
                 Container(_container);
             }
             DeviceIterator(DeviceIterator&& rhs)
                 : BaseClass()
-                , _container(rhs._container) {
+                , _container(rhs._container)
+            {
                 Container(_container);
             }
             ~DeviceIterator() override = default;
@@ -332,9 +336,6 @@ namespace Doofah {
 
         uint32_t Reset(const SimpleSerial::Protocol::DeviceAddressType address);
         uint32_t Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config);
-
-        uint32_t Release(const SimpleSerial::Protocol::DeviceAddressType address);
-        uint32_t Allocate(const SimpleSerial::Protocol::DeviceAddressType address);
 
     private:
         class Channel : public SimpleSerial::DataExchange<Core::SerialPort> {
