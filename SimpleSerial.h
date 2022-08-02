@@ -64,6 +64,8 @@ namespace SimpleSerial {
         typedef uint8_t* DataType;
         typedef uint8_t CRC8Type;
 
+        constexpr uint8_t InvalidAddress = DeviceAddressType(~0);
+
         enum class ResultType : uint8_t {
             OK = 0x00,
             NOT_CONNECTED,
