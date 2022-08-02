@@ -168,6 +168,7 @@ namespace Doofah {
                 : Message(SimpleSerial::Protocol::OperationType::STATE, address)
                 , _offset(~0)
             {
+                PayloadLength(0);
             }
 
             inline bool IsValidPayload() const
@@ -253,6 +254,7 @@ namespace Doofah {
             ResetMessage(const SimpleSerial::Protocol::DeviceAddressType address)
                 : Message(SimpleSerial::Protocol::OperationType::RESET, address)
             {
+                PayloadLength(0);
             }
         };
 
