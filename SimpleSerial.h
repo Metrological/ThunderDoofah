@@ -300,8 +300,13 @@ namespace SimpleSerial {
         typedef struct BLESettings {
             uint16_t vid;
             uint16_t pid;
-            char* name;
+            char name[64];
+            char manufacturer[64];
         } BLESettings;
+
+        typedef struct BatteryLevel {
+            uint8_t percentage;
+        } BatteryLevel; 
 
         //
         // TODO:
