@@ -32,7 +32,7 @@ namespace Plugin {
     {
         Property<Core::JSON::ArrayType<DeviceEntry>>(_T("devices"), &Doofah::JSONRPCDevices, nullptr, this);
         Register<SetupInfo, void>(_T("setup"), &Doofah::JSONRPCSetup, this);
-        Register<AddressInfo, void>(_T("reset"), &Doofah::JSONRPCReset, this);
+        Register<DeviceInfo, void>(_T("reset"), &Doofah::JSONRPCReset, this);
         Register<KeyInfo, void>(_T("press"), &Doofah::JSONRPCKeyPress, this);
         Register<KeyInfo, void>(_T("release"), &Doofah::JSONRPCKeyRelease, this);
     }
@@ -83,12 +83,12 @@ namespace Plugin {
         return result;
     }
 
-    uint32_t Doofah::JSONRPCReset(const AddressInfo& params)
+    uint32_t Doofah::JSONRPCReset(const DeviceInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
-        if (params.Address.IsSet() == true) {
-            result = _communicator.Reset(params.Address.Value());
+        if (params.Device.IsSet() == true) {
+            result = _communicator.Reset(params.Device.Value());
         } else {
             result = Core::ERROR_BAD_REQUEST;
         }

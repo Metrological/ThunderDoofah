@@ -44,20 +44,20 @@ namespace JsonData {
             Core::JSON::DecUInt32 Code; // Key code
         }; // class KeyInfo
 
-        class AddressInfo : public Core::JSON::Container {
+        class DeviceInfo : public Core::JSON::Container {
         public:
-            AddressInfo()
+            DeviceInfo()
                 : Core::JSON::Container()
             {
-                Add(_T("address"), &Address);
+                Add(_T("device"), &Device);
             }
 
-            AddressInfo(const AddressInfo&) = delete;
-            AddressInfo& operator=(const AddressInfo&) = delete;
+            DeviceInfo(const DeviceInfo&) = delete;
+            DeviceInfo& operator=(const DeviceInfo&) = delete;
 
         public:
-            Core::JSON::HexUInt8 Address; // Address 
-        }; // class AddressInfo
+            Core::JSON::HexUInt8 Device; // Device 
+        }; // class DeviceInfo
 
         class SetupInfo : public Core::JSON::Container {
         public:
@@ -115,14 +115,14 @@ namespace JsonData {
             }
             inline DeviceEntry(const DeviceEntry& copy)
                 : Core::JSON::Container()
-                , Address(copy.Address)
+                , Device(copy.Device)
                 , Peripheral(copy.Peripheral)
             {
                 Init();
             }
             DeviceEntry& operator=(const DeviceEntry& rhs)
             {
-                Address = rhs.Address;
+                Device = rhs.Device;
                 Peripheral = rhs.Peripheral;
                 return (*this);
             };
@@ -132,12 +132,12 @@ namespace JsonData {
         private:
             void Init()
             {
-                Add(_T("address"), &Address);
+                Add(_T("device"), &Device);
                 Add(_T("peripheral"), &Peripheral);
             }
 
         public:
-            Core::JSON::HexUInt16 Address;
+            Core::JSON::HexUInt16 Device;
             Core::JSON::EnumType<SimpleSerial::Payload::Peripheral> Peripheral;
         }; // class DeviceEntry
     } // namespace Doofah

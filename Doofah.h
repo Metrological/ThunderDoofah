@@ -114,7 +114,7 @@ namespace Plugin {
 
         static void FillDeviceInfo(const Payload::Device& info, DeviceEntry& entry)
         {
-            entry.Address = info.address;
+            entry.Device = info.address;
             entry.Peripheral = info.peripheral;
         }
 
@@ -170,7 +170,7 @@ namespace Plugin {
         uint32_t JSONRPCDevices(Core::JSON::ArrayType<DeviceEntry>& response) const;
 
         uint32_t JSONRPCSetup(const SetupInfo& params);
-        uint32_t JSONRPCReset(const AddressInfo& params);
+        uint32_t JSONRPCReset(const DeviceInfo& params);
 
         uint32_t JSONRPCKeyPress(const KeyInfo& params);
         uint32_t JSONRPCKeyRelease(const KeyInfo& params);
