@@ -35,6 +35,34 @@ namespace SimpleSerial {
         return g_sequence++;
     }
 
+    static void PrintMessage(const Protocol::Message& message)
+    {
+        string data;
+        Core::ToHexString(message.Data(), message.Size(), data);
+
+        TRACE_GLOBAL(Doofah::DataExchangeFlow, ("===== [Message Start] ========================================================="));
+        
+        TRACE_GLOBAL(Doofah::DataExchangeFlow, ("Raw message: %s", data.c_str()));
+        TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Complete: %s", message.IsComplete() ? "Yes" : "No"));
+        TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Length: %d", message.Size()));
+        TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Valid: %s", message.IsValid() ? "Yes" : "No"));
+
+        if (message.IsComplete() == true) {
+            TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Ooperation: 0x%02X", message.Operation()));
+            TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Sequence: 0x%02X", message.Sequence()));
+            TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Address: 0x%02X", message.Address()));
+            TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Payload length: %d", message.PayloadLength()));
+
+            data.clear();
+            Core::ToHexString(message.Payload(), message.PayloadLength(), data);
+        
+            TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Raw payload: %s", data.c_str()));
+            TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Checksum: 0x%02X", Protocol::CRC8(message.Size() - 1, message.Data())));
+        }
+
+        TRACE_GLOBAL(Doofah::DataExchangeFlow, ("===== [Message Stop] =========================================================="));
+    }
+
     template <typename LINK>
     class DataExchange {
     public:
@@ -135,28 +163,13 @@ namespace SimpleSerial {
         }
         virtual void Send(const Protocol::Message& message VARIABLE_IS_NOT_USED)
         {
-            string data;
-            Core::ToHexString(message.Data(), message.Size(), data);
-
-            TRACE(Doofah::DataExchangeFlow, ("Message Operation: 0x%02X", message.Operation()));
-            TRACE(Doofah::DataExchangeFlow, ("Message Sequence: 0x%02X", message.Sequence()));
-            TRACE(Doofah::DataExchangeFlow, ("Message Address: 0x%02X", message.Address()));
-            TRACE(Doofah::DataExchangeFlow, ("Message PayloadLength: 0x%02X", message.PayloadLength()));
-            TRACE(Doofah::DataExchangeFlow, ("Message Complete: %s", _current->IsComplete() ? "Yes" : "No"));
-            
-            TRACE(Doofah::DataExchangeFlow, ("Send message: %s", data.c_str()));
+            TRACE(Trace::Information, ("Send message Operation=0x%02X", message.Operation()));
+            PrintMessage(message);
         }
         virtual void Received(const Protocol::Message& message VARIABLE_IS_NOT_USED)
         {
-            string data;
-            Core::ToHexString(message.Data(), message.Size(), data);
-            TRACE(Doofah::DataExchangeFlow, ("Received message: %s", data.c_str()));
-
-            TRACE(Doofah::DataExchangeFlow, ("Message Operation: 0x%02X", message.Operation()));
-            TRACE(Doofah::DataExchangeFlow, ("Message Sequence: 0x%02X", message.Sequence()));
-            TRACE(Doofah::DataExchangeFlow, ("Message Address: 0x%02X", message.Address()));
-            TRACE(Doofah::DataExchangeFlow, ("Message PayloadLength: 0x%02X", message.PayloadLength()));
-            TRACE(Doofah::DataExchangeFlow, ("Message Valid: %s", message.IsValid() ? "Yes" : "No"));
+            TRACE(Trace::Information, ("Received message Operation=0x%02X", message.Operation()));
+            PrintMessage(message);
         }
 
     private:
@@ -215,9 +228,10 @@ namespace SimpleSerial {
 
             TRACE(Trace::Information, ("Complete message Operation=0x%02X", message.Operation()));
 
+            PrintMessage(message);
+
             if (_current != nullptr) {
-                _current->Clear();
-                _current->Deserialize(message.Size(), message.Data());
+                *_current = message;
             }
 
             _exchange.SetEvent();
@@ -256,14 +270,14 @@ namespace SimpleSerial {
             string data;
             Core::ToHexString(dataFrame, availableData, data);
 
-            TRACE(Doofah::DataExchangeFlow, ("Incomming data=%s", data.c_str()));
+            // TRACE(Doofah::DataExchangeFlow, ("Incomming data=%s", data.c_str()));
 
             _adminLock.Lock();
 
             while (consumedData < availableData) {
-                consumedData += _buffer.Deserialize( availableData - consumedData, &dataFrame[consumedData]);
+                consumedData += _buffer.Deserialize(availableData - consumedData, &dataFrame[consumedData]);
 
-                TRACE(Doofah::DataExchangeFlow, ("consumedData data=%d", consumedData));
+                // TRACE(Doofah::DataExchangeFlow, ("consumedData data=%d", consumedData));
 
                 if (_buffer.IsComplete() == true) {
                     if ((_current != nullptr) && (_current->Operation() == _buffer.Operation()) && (_current->Sequence() == _buffer.Sequence())) {
