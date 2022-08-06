@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "Log.h"
 
 #include <BleKeyboard.h>
 #include <EEPROM.h>
@@ -12,30 +13,6 @@ using namespace WPEFramework::SimpleSerial;
 BleKeyboard bleKeyboard("Doofah", "Metrological");
 Protocol::Message buffer;
 std::vector<Payload::Device> devices;
-
-#ifdef __DEBUG__
-static void log(const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-
-    std::vector<char> logbuf(strlen(fmt));
-
-    int sz = vsnprintf(&logbuf[0], logbuf.size(), fmt, args);
-
-    if (sz >= int(logbuf.size())) {
-        logbuf.resize(sz + 1);
-        vsnprintf(&logbuf[0], logbuf.size(), fmt, args);
-    }
-    va_end(args);
-
-    Serial2.println(&logbuf[0]);
-}
-#else
-static void log(const char*, ...)
-{
-}
-#endif
 
 OneButton button = OneButton(
     BUTTON_PIN, // Input pin for the button
@@ -157,7 +134,7 @@ Protocol::ResultType KeyMessage(const Payload::KeyEvent& event)
 {
     uint8_t keycode(event.code & 0xff);
 
-    log("Sending key event: 0x%02X (0x%04X)", keycode, event.code);
+    Log::Instance().Print("Sending key event: 0x%02X (0x%04X)", keycode, event.code);
 
     if (event.pressed == Payload::Action::PRESSED) {
         bleKeyboard.press(keycode);
@@ -175,7 +152,7 @@ void SendMessage(const Protocol::Message& message)
 
     uint8_t data(0);
 
-    log("Sending %d bytes with operation=0x%02X result=0x%02X...", message.Size(), message.Operation(), message.Result());
+    Log::Instance().Print("Sending %d bytes with operation=0x%02X result=0x%02X...", message.Size(), message.Operation(), message.Result());
 
     while (message.Serialize(sizeof(data), &data) != 0) {
         Serial.write(data);
@@ -187,7 +164,7 @@ void Process(Protocol::Message& message)
 {
     bool reboot = false;
 
-    log("Processing %d bytes with operation=0x%02X device=0x%02X...", message.Size(), message.Operation(), message.Address());
+    Log::Instance().Print("Processing %d bytes with operation=0x%02X device=0x%02X...", message.Size(), message.Operation(), message.Address());
 
     if (message.IsValid() == false) {
         message.PayloadLength(0);
@@ -238,7 +215,7 @@ void Process(Protocol::Message& message)
         case Protocol::OperationType::SETTINGS:
             if (message.Address() == 0x01) {
                 if (message.PayloadLength() == sizeof(Payload::BLESettings)) {
-                    log("BLE Settings");
+                    Log::Instance().Print("BLE Settings");
 
                     Payload::BLESettings newSettings;
 
@@ -360,10 +337,6 @@ void PressUpdate()
 
 void setup()
 {
-#ifdef __DEBUG__
-    Serial2.begin(LOG_BAUDRATE, SERIAL_8N1, LOG_RX_PIN, LOG_TX_PIN);
-#endif
-
     led.Begin();
     Led(red);
 
@@ -390,22 +363,22 @@ void setup()
 
     if (strlen(_config.ble.name) > 0) {
         bleKeyboard.setName(_config.ble.name);
-        log("BLE name %s loaded from flash", _config.ble.name);
+        Log::Instance().Print("BLE name %s loaded from flash", _config.ble.name);
     }
 
     if (_config.ble.vid > 0) {
         bleKeyboard.set_vendor_id(_config.ble.vid);
-        log("BLE vendor ID 0x%04X loaded from flash", _config.ble.vid);
+        Log::Instance().Print("BLE vendor ID 0x%04X loaded from flash", _config.ble.vid);
     }
 
     if (_config.ble.pid > 0) {
         bleKeyboard.set_product_id(_config.ble.pid);
-        log("BLE product ID 0x%04X loaded from flash", _config.ble.pid);
+        Log::Instance().Print("BLE product ID 0x%04X loaded from flash", _config.ble.pid);
     }
 
     if (_config.battery.percentage > 0) {
         bleKeyboard.setBatteryLevel(_config.battery.percentage);
-        log("BLE batery level %d% loaded from flash", _config.battery.percentage);
+        Log::Instance().Print("BLE batery level %d% loaded from flash", _config.battery.percentage);
     }
 
     bleKeyboard.begin();
@@ -413,7 +386,7 @@ void setup()
     Serial.begin(COM_BAUDRATE);
 
     NimBLEAddress address = NimBLEDevice::getAddress();
-    log("Starting BLE work on [%s] endpoint build %s", address.toString().c_str(), __TIMESTAMP__);
+    Log::Instance().Print("Starting BLE work on [%s] endpoint build %s", address.toString().c_str(), __TIMESTAMP__);
     SendEvent();
     Led(off);
 }
@@ -428,7 +401,7 @@ void loop()
         buffer.Deserialize(sizeof(byte), &byte);
 
         if (buffer.IsComplete()) {
-            log("Received a complete message!");
+            Log::Instance().Print("Received a complete message!");
             Process(buffer);
             Led(off);
         }
