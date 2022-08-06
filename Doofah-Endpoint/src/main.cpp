@@ -1,8 +1,11 @@
 #include <Arduino.h>
+
 #include <BleKeyboard.h>
-#include <NimBLEDevice.h>
-#include <SimpleSerial.h>
 #include <EEPROM.h>
+#include <NeoPixelBus.h>
+#include <NimBLEDevice.h>
+#include <OneButton.h>
+#include <SimpleSerial.h>
 
 using namespace WPEFramework::SimpleSerial;
 
@@ -10,212 +13,424 @@ BleKeyboard bleKeyboard("Doofah", "Metrological");
 Protocol::Message buffer;
 std::vector<Payload::Device> devices;
 
-// EEPROM addresses
-constexpr uint8_t MessageBaseAddress = 0x00;
-
-struct Config {
-  // The default values if there is no EEPROM setting yet..
-  Config() 
-    : ProductId(0)
-    , VendorId(0)
-    , Address(0) {
-  }
-
-  // Values that can be set to change the bahaviour of the Doofah..
-  uint16_t ProductId;
-  uint16_t VendorId;
-  uint8_t Address;
-
-} _config;
-
 #ifdef __DEBUG__
-void log(const char *fmt, ...)
+static void log(const char* fmt, ...)
 {
-  va_list args;
-  va_start(args, fmt);
+    va_list args;
+    va_start(args, fmt);
 
-  std::vector<char> buffer(strlen(fmt));
+    std::vector<char> logbuf(strlen(fmt));
 
-  int sz = vsnprintf(&buffer[0], buffer.size(), fmt, args);
+    int sz = vsnprintf(&logbuf[0], logbuf.size(), fmt, args);
 
-  if (sz >= int(buffer.size()))
-  {
-    buffer.resize(sz + 1);
-    vsnprintf(&buffer[0], buffer.size(), fmt, args);
-  }
-  va_end(args);
+    if (sz >= int(logbuf.size())) {
+        logbuf.resize(sz + 1);
+        vsnprintf(&logbuf[0], logbuf.size(), fmt, args);
+    }
+    va_end(args);
 
-  Serial2.println(&buffer[0]);
+    Serial2.println(&logbuf[0]);
 }
-#else 
-void log (const char *, ...)
+#else
+static void log(const char*, ...)
 {
 }
 #endif
 
-// Store information in the EEPROM that should be persited over boots
-// ------------------------------------------------------------------------
-void Save()
+OneButton button = OneButton(
+    BUTTON_PIN, // Input pin for the button
+    true, // Button is active LOW
+    true // Enable internal pull-up resistor
+);
+
+// save the millis when a press has started.
+unsigned long pressStartTime;
+
+// The time when LongPressStart is called
+constexpr uint16_t longPressTimeMs = 1000;
+
+NeoPixelBus<NeoGrbFeature, NeoSk6812Method> led(RGB_LED_COUNT, RGB_LED_PIN);
+
+constexpr uint8_t colorSaturation = 16;
+
+RgbColor red(colorSaturation, 0, 0);
+RgbColor green(0, colorSaturation, 0);
+RgbColor blue(0, 0, colorSaturation);
+RgbColor off(0);
+
+unsigned long lastBlink = 0;
+
+void Led(const RgbColor& color)
 {
-  EEPROM.writeBytes(MessageBaseAddress, &_config, sizeof(_config));
-  EEPROM.commit();
+    led.SetPixelColor(0, color);
+    led.Show();
 }
 
+constexpr uint8_t IRDevices[] = {
+    IR_TX_PIN
+};
+
+// EEPROM addresses
+constexpr uint8_t MessageBaseAddress = 0x00;
+
+#pragma pack(push, 1)
+struct Config {
+    // The default values if there is no EEPROM setting yet..
+    Config()
+        : ble()
+        , ir()
+        , battery()
+    {
+        memset(&ble, 0, sizeof(ble));
+        memset(&ir, 0, sizeof(ir));
+        memset(&battery, 0, sizeof(battery));
+    }
+    Payload::BLESettings ble;
+    Payload::IRSettings ir;
+    Payload::BatteryLevel battery;
+} _config;
+#pragma pack(pop)
+
+void Save()
+{
+    EEPROM.writeBytes(MessageBaseAddress, &_config, sizeof(_config));
+    EEPROM.commit();
+}
 void Load()
 {
-  if (EEPROM.readByte(MessageBaseAddress) != 0xFF) {
-    EEPROM.readBytes(MessageBaseAddress, &_config, sizeof(_config));
-  }
+    if (EEPROM.readByte(MessageBaseAddress) != 0xFF) {
+        EEPROM.readBytes(MessageBaseAddress, &_config, sizeof(_config));
+    }
+}
+
+bool SetBLE(const Payload::BLESettings& newSettings)
+{
+    bool changed;
+
+    if ((memcmp(&newSettings, &_config.ble, std::min(sizeof(newSettings), sizeof(_config.ble))) != 0)) {
+        memcpy(&_config.ble, &newSettings, std::min(sizeof(newSettings), sizeof(_config.ble)));
+        changed = true;
+    }
+
+    return changed;
+}
+bool SetIR(const Payload::IRSettings& newSettings)
+{
+    bool changed;
+
+    if ((memcmp(&newSettings, &_config.ir, std::min(sizeof(newSettings), sizeof(_config.ir))) != 0)) {
+        memcpy(&_config.ir, &newSettings, std::min(sizeof(newSettings), sizeof(_config.ir)));
+        changed = true;
+    }
+
+    return changed;
+}
+bool SetBattery(const Payload::BatteryLevel& newSettings)
+{
+    bool changed;
+
+    if ((memcmp(&newSettings, &_config.battery, std::min(sizeof(newSettings), sizeof(_config.battery))) != 0)) {
+        memcpy(&_config.battery, &newSettings, std::min(sizeof(newSettings), sizeof(_config.battery)));
+
+        (newSettings.percentage == 0) ? bleKeyboard.setBatteryLevel(100) : bleKeyboard.setBatteryLevel(newSettings.percentage);
+        changed = true;
+    }
+
+    return changed;
+}
+
+void FactoryReset()
+{
+    Serial.flush();
+    Serial.end();
+
+    Config cleared;
+
+    if (SetBLE(cleared.ble) || SetIR(cleared.ir) || SetBattery(cleared.battery)) {
+        Save();
+    }
+
+    ESP.restart();
 }
 
 Protocol::ResultType KeyMessage(const Payload::KeyEvent& event)
 {
-  uint8_t keycode(event.code & 0xff);
+    uint8_t keycode(event.code & 0xff);
 
-  log("Sending key event: 0x%02X (0x%04X)", keycode, event.code);
+    log("Sending key event: 0x%02X (0x%04X)", keycode, event.code);
 
-  if (event.pressed == Payload::Action::PRESSED)
-  {
-    bleKeyboard.press(keycode);
-  }
-  else
-  {
-    bleKeyboard.release(keycode);
-  }
+    if (event.pressed == Payload::Action::PRESSED) {
+        bleKeyboard.press(keycode);
+    } else {
+        bleKeyboard.release(keycode);
+    }
 
-  return Protocol::ResultType::OK;
+    return Protocol::ResultType::OK;
 }
 
-void SendMessage(const Protocol::Message &message)
+void SendMessage(const Protocol::Message& message)
 {
-  uint8_t data(0);
+    RgbColor color = led.GetPixelColor(0);
+    Led(green);
 
-  log("Sending %d bytes with operation=0x%02X result=0x%02X...", message.Size(), message.Operation(), message.Result());
+    uint8_t data(0);
 
-  while (message.Serialize(sizeof(data), &data) != 0)
-  {
-    Serial.write(data);
-  }
+    log("Sending %d bytes with operation=0x%02X result=0x%02X...", message.Size(), message.Operation(), message.Result());
+
+    while (message.Serialize(sizeof(data), &data) != 0) {
+        Serial.write(data);
+    }
+    Led(color);
 }
 
-
-void Process(Protocol::Message &message)
+void Process(Protocol::Message& message)
 {
-  bool reboot = false;
+    bool reboot = false;
 
-  log("Processing %d 0x%02X...", message.Size(), message.Operation());
+    log("Processing %d bytes with operation=0x%02X device=0x%02X...", message.Size(), message.Operation(), message.Address());
 
-  if (message.IsValid() == false) {
-    message.PayloadLength(0);
-    message.Result(Protocol::ResultType::CRC_INVALID);
-  }
-  else {
-    Protocol::ResultType result = Protocol::ResultType::OPERATION_INVALID;
-
-    switch (message.Operation())
-    {
-    case Protocol::OperationType::ALLOCATE:
-      result = Protocol::ResultType::OK;
-      message.PayloadLength(0);
-      break;
-
-    case Protocol::OperationType::FREE:
-      result = Protocol::ResultType::OK;
-      message.PayloadLength(0);
-      break;
-
-    case Protocol::OperationType::KEY:
-      if (message.PayloadLength() == sizeof(Payload::KeyEvent))
-      {
-        result = KeyMessage(*(reinterpret_cast<const Payload::KeyEvent *>(message.Payload())));
-      }
-      message.PayloadLength(0);
-      break;
-
-    case Protocol::OperationType::RESET:
-      if (message.Address() == static_cast<Protocol::DeviceAddressType>(Payload::Peripheral::ROOT))
-      {
-        reboot = true;
-        result = Protocol::ResultType::OK;
+    if (message.IsValid() == false) {
         message.PayloadLength(0);
-      }
-      break;
+        message.Result(Protocol::ResultType::CRC_INVALID);
+    } else {
+        Protocol::ResultType result = Protocol::ResultType::OPERATION_INVALID;
 
-    case Protocol::OperationType::SETTINGS:
-      result = Protocol::ResultType::OK;
-      message.PayloadLength(0);
-      break;
+        switch (message.Operation()) {
+        case Protocol::OperationType::KEY:
+            if (message.PayloadLength() == sizeof(Payload::KeyEvent)) {
+                result = KeyMessage(*(reinterpret_cast<const Payload::KeyEvent*>(message.Payload())));
+            }
+            message.PayloadLength(0);
+            break;
 
-    case Protocol::OperationType::STATE:
-    {
-      uint8_t offset(0);
-      uint8_t payload[devices.size() * sizeof(Payload::Device)];
+        case Protocol::OperationType::RESET:
+            if (message.Address() == 0x00) {
+                reboot = true;
+                result = Protocol::ResultType::OK;
+            } else if (message.Address() == 0x01) {
+                Payload::BLESettings clean;
+                memset(&clean, 0, sizeof(clean));
 
-      for (const auto &dev : devices)
-      {
-        memcpy(&payload[offset],reinterpret_cast<const uint8_t *>(&dev),  sizeof(Payload::Device));
-        offset += sizeof(Payload::Device);
-      }
+                if (SetBLE(clean) == true) {
+                    Save();
+                    reboot = true;
+                }
+                result = Protocol::ResultType::OK;
+            }
+#ifdef IR_ENABLED
+            else if (message.Address() == 0x02) {
+                Payload::IRSettings clean;
+                memset(&clean, 0, sizeof(clean));
 
-      message.Payload(sizeof(payload), payload);
-      result = Protocol::ResultType::OK;
-      break;
+                if (SetIR(clean) == true) {
+                    Save();
+                    reboot = true;
+                }
+                result = Protocol::ResultType::OK;
+            }
+#endif
+            else {
+                result = Protocol::ResultType::NOT_AVAILABLE;
+            }
+            message.PayloadLength(0);
+            break;
+
+        case Protocol::OperationType::SETTINGS:
+            if (message.Address() == 0x01) {
+                if (message.PayloadLength() == sizeof(Payload::BLESettings)) {
+                    log("BLE Settings");
+
+                    Payload::BLESettings newSettings;
+
+                    memcpy(&newSettings, message.Payload(), message.PayloadLength());
+
+                    if (SetBLE(newSettings) == true) {
+                        Save();
+                    }
+
+                    result = Protocol::ResultType::OK;
+                } else {
+                    result = Protocol::ResultType::PAYLOAD_INVALID;
+                }
+            }
+#ifdef IR_ENABLED
+            else if (message.Address() == 0x02) {
+
+                if (message.PayloadLength() == sizeof(Payload::IRSettings)) {
+                    Payload::IRSettings newSettings;
+
+                    memcpy(&newSettings, message.Payload(), message.PayloadLength());
+
+                    if (SetIR(newSettings) == true) {
+                        Save();
+                    }
+
+                    result = Protocol::ResultType::OK;
+                } else {
+                    result = Protocol::ResultType::PAYLOAD_INVALID;
+                }
+            }
+#endif
+            else {
+                result = Protocol::ResultType::NOT_AVAILABLE;
+            }
+
+            message.PayloadLength(0);
+
+            break;
+
+        case Protocol::OperationType::STATE: {
+            uint8_t offset(0);
+            uint8_t payload[devices.size() * sizeof(Payload::Device)];
+
+            for (const auto& dev : devices) {
+                memcpy(&payload[offset], reinterpret_cast<const uint8_t*>(&dev), sizeof(Payload::Device));
+                offset += sizeof(Payload::Device);
+            }
+
+            message.Payload(sizeof(payload), payload);
+            result = Protocol::ResultType::OK;
+            break;
+        }
+
+            // case Protocol::OperationType::EVENT:
+            //     ASSERT(false); // We should be generating this...
+            //     break;
+
+        default:
+            message.PayloadLength(0);
+            break;
+        }
+
+        message.Result(result);
     }
 
-    case Protocol::OperationType::EVENT:
-      ASSERT(false); // We should be generating this...
-      break;
+    message.Finalize();
 
-    default:
-      message.PayloadLength(0);
-      break;
+    SendMessage(message);
+
+    if (reboot == true) {
+        ESP.restart();
     }
 
-    message.Result(result);
-  }
+    message.Clear();
+}
 
-  message.Finalize();
+void SendEvent()
+{
+    Protocol::Message message;
+    message.Clear();
+    message.Operation(Protocol::OperationType::EVENT);
+    message.PayloadLength(0);
 
-  SendMessage(message);
+    message.Finalize();
 
-  if (reboot == true) {
-    ESP.restart();
-  }
+    SendMessage(message);
+}
 
-  message.Clear();
+// button callbacks
+void SingleClick()
+{
+    // poke the plugin
+    SendEvent();
+}
+void PressStart()
+{
+    pressStartTime = millis() - longPressTimeMs;
+}
+void PressStop()
+{
+    Led(off);
+    lastBlink = 0;
+}
+void PressUpdate()
+{
+    unsigned long time = millis() - pressStartTime;
+
+    if (time > (lastBlink + 500)) {
+        RgbColor color = led.GetPixelColor(0);
+        (color == off) ? Led(red) : Led(off);
+        lastBlink = time;
+    }
+
+    if (time > 10000) {
+        FactoryReset();
+    }
 }
 
 void setup()
 {
-  #ifdef __DEBUG__
-  Serial2.begin(LOGBAUDRATE, SERIAL_8N1, LOGRXPIN, LOGTXPIN);
-  #endif
+#ifdef __DEBUG__
+    Serial2.begin(LOG_BAUDRATE, SERIAL_8N1, LOG_RX_PIN, LOG_TX_PIN);
+#endif
 
-  buffer.Clear();
+    led.Begin();
+    Led(red);
 
-  devices.push_back({0x00, Payload::PeripheralState::AVAILABLE, Payload::Peripheral::ROOT});
-  devices.push_back({0x01, Payload::PeripheralState::AVAILABLE, Payload::Peripheral::BLE});
+    EEPROM.begin(sizeof(_config));
+    Load();
 
-  EEPROM.begin(sizeof(_config));
-  bleKeyboard.begin();
-  
-  Load();
+    buffer.Clear();
 
-  NimBLEAddress address = NimBLEDevice::getAddress();
-  log("Starting BLE work on [%s] endpoint build %s", address.toString().c_str(), __TIMESTAMP__);
+    devices.push_back({ 0x00, Payload::PeripheralState::AVAILABLE, Payload::Peripheral::ROOT });
+    devices.push_back({ 0x01, Payload::PeripheralState::AVAILABLE, Payload::Peripheral::BLE });
+
+#ifdef IR_ENABLED
+    uint8_t deviceAdressIndex(0);
+    while (deviceAdressIndex < sizeof(IRDevices)) {
+        devices.push_back({ IRDevices[deviceAdressIndex++], Payload::PeripheralState::AVAILABLE, Payload::Peripheral::IR });
+    }
+#endif
+
+    button.setPressTicks(longPressTimeMs);
+    button.attachClick(SingleClick);
+    button.attachLongPressStart(PressStart);
+    button.attachLongPressStop(PressStop);
+    button.attachDuringLongPress(PressUpdate);
+
+    if (strlen(_config.ble.name) > 0) {
+        bleKeyboard.setName(_config.ble.name);
+        log("BLE name %s loaded from flash", _config.ble.name);
+    }
+
+    if (_config.ble.vid > 0) {
+        bleKeyboard.set_vendor_id(_config.ble.vid);
+        log("BLE vendor ID 0x%04X loaded from flash", _config.ble.vid);
+    }
+
+    if (_config.ble.pid > 0) {
+        bleKeyboard.set_product_id(_config.ble.pid);
+        log("BLE product ID 0x%04X loaded from flash", _config.ble.pid);
+    }
+
+    if (_config.battery.percentage > 0) {
+        bleKeyboard.setBatteryLevel(_config.battery.percentage);
+        log("BLE batery level %d% loaded from flash", _config.battery.percentage);
+    }
+
+    bleKeyboard.begin();
+
+    Serial.begin(COM_BAUDRATE);
+
+    NimBLEAddress address = NimBLEDevice::getAddress();
+    log("Starting BLE work on [%s] endpoint build %s", address.toString().c_str(), __TIMESTAMP__);
+    SendEvent();
+    Led(off);
 }
 
 void loop()
 {
-  while (Serial.available() > 0)
-  {
-    uint8_t byte = Serial.read();
-    buffer.Deserialize(sizeof(byte), &byte);
+    button.tick();
+    while (Serial.available() > 0) {
+        Led(blue);
 
-    if (buffer.IsComplete())
-    {
-      log("Received a complete message!");
-      Process(buffer);
+        uint8_t byte = Serial.read();
+        buffer.Deserialize(sizeof(byte), &byte);
+
+        if (buffer.IsComplete()) {
+            log("Received a complete message!");
+            Process(buffer);
+            Led(off);
+        }
     }
-  }
 }
