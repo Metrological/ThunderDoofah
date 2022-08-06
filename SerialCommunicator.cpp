@@ -124,10 +124,8 @@ namespace Doofah {
 
     void SerialCommunicator::Received(const SimpleSerial::Protocol::Message& message)
     {
-        string data;
-        Core::ToHexString(message.Data(), message.Size(), data);
-
-        TRACE(Trace::Information, ("Received data: %s", data.c_str()));
+        TRACE(Trace::Information, ("Received message: 0x%02X", message.Operation()));
+        SimpleSerial::PrintMessage(message);
     }
 
     uint32_t SerialCommunicator::Reset(const SimpleSerial::Protocol::DeviceAddressType address) const
@@ -149,41 +147,40 @@ namespace Doofah {
     }
     uint32_t SerialCommunicator::Setup(const SimpleSerial::Protocol::DeviceAddressType address, const string& config) const
     {
-        uint32_t bleResult(Core::ERROR_NONE);
-        uint32_t irResult(Core::ERROR_NONE);
+        uint32_t result(Core::ERROR_INCOMPLETE_CONFIG);
 
-        PeripheralConfig peripheralConfig;
-        peripheralConfig.FromString(config);
+        SetupConfig SetupConfig;
+        SetupConfig.FromString(config);
 
         TRACE(Trace::Information, ("Setup device: 0x%02X", address));
 
-        if (peripheralConfig.BLE.IsSet() == true) {
+        if ((SetupConfig.Type.IsSet() == true) && (SetupConfig.Type.Value() == SimpleSerial::Payload::Peripheral::ROOT)) {
+            result = Core::ERROR_NOT_SUPPORTED;
+        } else if ((SetupConfig.Type.IsSet() == true) && (SetupConfig.Type.Value() == SimpleSerial::Payload::Peripheral::BLE)) {
             BLEConfig bleConfig;
-            bleConfig.FromString(peripheralConfig.BLE.Value());
+            bleConfig.FromString(SetupConfig.Configuration.Value());
 
             SettingsMessage bleSettings(address, bleConfig);
 
-            bleResult = _channel.Post(bleSettings, 1000);
+            result = _channel.Post(bleSettings, 1000);
 
-            if ((bleResult == Core::ERROR_NONE) && (bleSettings.Result() != SimpleSerial::Protocol::ResultType::OK)) {
+            if ((result == Core::ERROR_NONE) && (bleSettings.Result() != SimpleSerial::Protocol::ResultType::OK)) {
                 TRACE(Trace::Error, ("Exchange BLE settings Failed: %d", static_cast<uint8_t>(bleSettings.Result())));
             }
-        }
-
-        if (peripheralConfig.IR.IsSet() == true) {
+        } else if ((SetupConfig.Type.IsSet() == true) && (SetupConfig.Type.Value() == SimpleSerial::Payload::Peripheral::IR)) {
             IRConfig irConfig;
-            irConfig.FromString(peripheralConfig.IR.Value());
+            irConfig.FromString(SetupConfig.Configuration.Value());
 
             SettingsMessage irSettings(address, irConfig);
 
-            irResult = _channel.Post(irSettings, 1000);
+            result = _channel.Post(irSettings, 1000);
 
-            if ((irResult == Core::ERROR_NONE) && (irSettings.Result() != SimpleSerial::Protocol::ResultType::OK)) {
+            if ((result == Core::ERROR_NONE) && (irSettings.Result() != SimpleSerial::Protocol::ResultType::OK)) {
                 TRACE(Trace::Error, ("Exchange IR settings Failed: %d", static_cast<uint8_t>(irSettings.Result())));
             }
         }
 
-        return ((bleResult != Core::ERROR_NONE) && (irResult != Core::ERROR_NONE)) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+        return result;
     }
 } // namespace Doofah
 } // namespace WPEFramework

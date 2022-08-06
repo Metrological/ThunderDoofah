@@ -68,19 +68,22 @@ namespace Doofah {
                 , VID(0)
                 , PID(0)
                 , Name()
+                , Manufacturer()
             {
                 Add(_T("vid"), &VID);
                 Add(_T("pid"), &PID);
                 Add(_T("name"), &Name);
+                Add(_T("manufacturer"), &Manufacturer);
             }
             ~BLEConfig()
             {
             }
 
         public:
-            Core::JSON::DecUInt16 VID;
-            Core::JSON::DecUInt16 PID;
+            Core::JSON::HexUInt16 VID;
+            Core::JSON::HexUInt16 PID;
             Core::JSON::String Name;
+            Core::JSON::String Manufacturer;
         };
 
         class IRConfig : public Core::JSON::Container {
@@ -103,25 +106,26 @@ namespace Doofah {
             Core::JSON::DecUInt16 CarrierHz;
         };
 
-        class PeripheralConfig : public Core::JSON::Container {
+        class SetupConfig : public Core::JSON::Container {
         private:
-            PeripheralConfig(const PeripheralConfig&) = delete;
-            PeripheralConfig& operator=(const PeripheralConfig&) = delete;
+            SetupConfig(const SetupConfig&) = delete;
+            SetupConfig& operator=(const SetupConfig&) = delete;
 
         public:
-            PeripheralConfig()
+            SetupConfig()
                 : Core::JSON::Container()
-                , BLE()
-                , IR()
+                , Type()
+                , Configuration()
             {
-                Add(_T("ble"), &BLE);
-                Add(_T("ir"), &IR);
+                Add(_T("type"), &Type);
+                Add(_T("setup"), &Configuration);
             }
-            ~PeripheralConfig() = default;
+            ~SetupConfig() = default;
 
         public:
-            Core::JSON::String BLE;
-            Core::JSON::String IR;
+            
+            Core::JSON::EnumType<SimpleSerial::Payload::Peripheral> Type;
+            Core::JSON::String Configuration;
         };
 
         class Message : public SimpleSerial::Protocol::Message {
@@ -225,6 +229,7 @@ namespace Doofah {
                 : Message(SimpleSerial::Protocol::OperationType::SETTINGS, address)
             {
                 SimpleSerial::Payload::BLESettings payload;
+                uint8_t copyLength(0);
 
                 memset(&payload, 0, sizeof(payload));
 
@@ -237,8 +242,13 @@ namespace Doofah {
                 }
 
                 if (config.Name.IsSet()) {
-                    uint8_t copyLength = std::min(static_cast<uint8_t>(config.Name.Value().size()), static_cast<uint8_t>(SimpleSerial::Protocol::MaxPayloadSize - (sizeof(payload) - sizeof(payload.name))));
-                    memcpy(&payload.vid, config.Name.Value().c_str(), copyLength);
+                    copyLength = std::min(static_cast<uint8_t>(config.Name.Value().size()), static_cast<uint8_t>(sizeof(payload.name)));
+                    memcpy(&payload.name, config.Name.Value().c_str(), copyLength);
+                }
+
+                if (config.Manufacturer.IsSet()) {
+                    copyLength = std::min(static_cast<uint8_t>(config.Manufacturer.Value().size()), static_cast<uint8_t>(sizeof(payload.manufacturer)));
+                    memcpy(&payload.manufacturer, config.Manufacturer.Value().c_str(), copyLength);
                 }
 
                 Payload(sizeof(payload), reinterpret_cast<uint8_t*>(&payload));
