@@ -64,6 +64,8 @@ namespace SimpleSerial {
         typedef uint8_t* DataType;
         typedef uint8_t CRC8Type;
 
+        constexpr uint8_t Preamble = 0xAA; // weird hook in ascii-2
+
         constexpr uint8_t InvalidAddress = DeviceAddressType(~0);
 
         enum class ResultType : uint8_t {
@@ -73,6 +75,7 @@ namespace SimpleSerial {
             TRANSMIT_FAILED,
             CRC_INVALID,
             OPERATION_INVALID,
+            PAYLOAD_INVALID
         };
 
         constexpr uint8_t MaxDataSize = 0xFF;
@@ -102,51 +105,89 @@ namespace SimpleSerial {
             uint8_t _buffer[MaxDataSize];
             uint8_t _size;
             mutable uint8_t _offset;
+            mutable bool _preamble;
+
+            Message& operator=(const Message& message)
+            {
+                Clear();
+
+                memcpy(_buffer, message.Data(), message.Size());
+                _size = message.Size();
+                _offset = 0;
+                _preamble = false;
+
+                return *this;
+            }
 
             void Clear()
             {
                 std::memset(_buffer, 0, sizeof(_buffer));
                 _size = 0;
                 _offset = 0;
+                _preamble = false;
             }
 
             uint16_t Deserialize(const uint16_t length, const uint8_t data[])
             {
                 uint16_t result(0);
+                uint8_t offset(0);
 
-                if (length > 0) {
+                // Flush all data untill we find the preamble. 
+                while ((_preamble == false) && (offset < length)) {
+                    _preamble = (data[offset++] == Preamble);
+                }
+
+                // recover from a incomplete message in the buffer 
+                if (((length - offset) > 0) && (data[offset] == Preamble)) {
+                    _size = 0;
+                    _offset = 0;
+                    _preamble = true;
+                }
+
+                if ((length - offset) > 0) {
                     if (_size < HeaderSize) {
-                        result = std::min(length, uint16_t(HeaderSize - _size));
+                        result = std::min(uint16_t(length - offset), uint16_t(HeaderSize - _size));
 
-                        std::memcpy(&_buffer[_size], data, result);
+                        std::memcpy(&_buffer[_size], &data[offset], result);
 
                         _size += result;
                     }
 
                     if ((_size >= HeaderSize) && (result < length)) {
-                        uint8_t copyLength = std::min(uint8_t(length - result), uint8_t(_size - HeaderSize + PayloadLength() + sizeof(CRC8Type)));
+                        uint8_t copyLength = std::min(uint8_t(length - result - offset), uint8_t((HeaderSize + PayloadLength() + sizeof(CRC8Type)) - _size));
 
-                        std::memcpy(&_buffer[_size], &(data[result]), copyLength);
+                        std::memcpy(&_buffer[_size], &(data[offset + result]), copyLength);
 
                         _size += copyLength;
                         result += copyLength;
                     }
                 }
 
-                return result;
+                return result + offset;
             }
             uint16_t Serialize(uint16_t length, uint8_t data[]) const
             {
-                uint16_t copyLength = std::min(length, uint16_t(_size - _offset));
+                uint16_t copyLength(0);
+                uint8_t offset(0);
 
-                ASSERT(IsComplete() == true);
-
-                if (copyLength > 0) {
-                    std::memcpy(data, &_buffer[_offset], copyLength);
-                    _offset += copyLength;
+                if (_preamble == false) {
+                    std::memcpy(data, &Preamble, sizeof(Preamble));
+                    offset += sizeof(Preamble);
+                    _preamble = true;
                 }
 
-                return copyLength;
+                if ((_preamble == true) && (length - offset > 0)) {
+                    copyLength = std::min(uint16_t(length - offset), uint16_t(_size - _offset));
+
+                    ASSERT(IsComplete() == true);
+
+                    if (copyLength > 0) {
+                        std::memcpy(&data[offset], &_buffer[_offset], copyLength);
+                        _offset += copyLength;
+                    }
+                }
+
+                return copyLength + offset;
             }
 
             bool IsComplete() const
@@ -267,6 +308,7 @@ namespace SimpleSerial {
 
                 // Ready to be send...
                 _offset = 0;
+                _preamble = false;
 
                 return crc;
             }
@@ -306,7 +348,7 @@ namespace SimpleSerial {
 
         typedef struct BatteryLevel {
             uint8_t percentage;
-        } BatteryLevel; 
+        } BatteryLevel;
 
         //
         // TODO:
