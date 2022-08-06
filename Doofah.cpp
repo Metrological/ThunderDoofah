@@ -102,6 +102,9 @@ namespace Plugin {
     bool Doofah::ParseSetupBody(const Web::Request& request, Protocol::DeviceAddressType& address, string& setup)
     {
         bool parsed = false;
+
+        address = Protocol::InvalidAddress;
+
         const string payload = ((request.HasBody() == true) ? string(*request.Body<const Web::TextBody>()) : "");
 
         if (payload.empty() == false) {
@@ -111,10 +114,11 @@ namespace Plugin {
             if ((data.Device.IsSet() == true) && (data.Configuration.IsSet() == true)) {
                 address = data.Device.Value();
                 setup = data.Configuration.Value();
+                parsed = true;
             }
-
-            parsed = true;
         }
+
+        TRACE(Trace::Information, ("%s:%s address=0x%02X payload='%s'", __FUNCTION__, parsed ? "OK" : "NOK", address, payload.c_str()));
 
         return parsed;
     }
@@ -122,6 +126,9 @@ namespace Plugin {
     bool Doofah::ParseKeyCodeBody(const Web::Request& request, Protocol::DeviceAddressType& address, uint32_t& code)
     {
         bool parsed = false;
+
+        address = Protocol::InvalidAddress;
+
         const string payload = ((request.HasBody() == true) ? string(*request.Body<const Web::TextBody>()) : "");
 
         if (payload.empty() == false) {
@@ -135,23 +142,30 @@ namespace Plugin {
             parsed = true;
         }
 
+        TRACE(Trace::Information, ("%s:%s address=0x%02X payload='%s'", __FUNCTION__, parsed ? "OK" : "NOK", address, payload.c_str()));
+
         return parsed;
     }
 
     bool Doofah::ParseDeviceAddressBody(const Web::Request& request, Protocol::DeviceAddressType& address)
     {
         bool parsed = false;
+
+        address = Protocol::InvalidAddress;
+
         const string payload = ((request.HasBody() == true) ? string(*request.Body<const Web::TextBody>()) : "");
 
         if (payload.empty() == false) {
-            JsonData::Doofah::AddressInfo data;
+            JsonData::Doofah::DeviceInfo data;
             data.FromString(payload);
 
-            if (data.Address.IsSet() == true) {
-                address = data.Address.Value();
+            if (data.Device.IsSet() == true) {
+                address = data.Device.Value();
             }
             parsed = true;
         }
+
+        TRACE(Trace::Information, ("%s:%s address=0x%02X payload='%s'", __FUNCTION__, parsed ? "OK" : "NOK", address, payload.c_str()));
 
         return parsed;
     }
@@ -179,6 +193,7 @@ namespace Plugin {
             result->ErrorCode = Web::STATUS_ACCEPTED;
             result->Message = string((_T("Returned Devices")));
             result->Body(devices);
+            result->ContentType = Web::MIMETypes::MIME_JSON;
         }
 
         return (result);
@@ -196,7 +211,7 @@ namespace Plugin {
         if (index.IsValid() == true && index.Next() == true) {
             bool pressed = false;
             Protocol::DeviceAddressType address(Protocol::InvalidAddress);
-
+    
             // PUT .../Doofah/Press|Release : send a code to the end point
             if (((pressed = (index.Current() == _T("Press"))) == true) || (index.Current() == _T("Release"))) {
                 uint32_t code = 0;
@@ -228,18 +243,18 @@ namespace Plugin {
                     result->Message = string(_T("No config or/and device address in body"));
                 }
             } else if (index.Current() == _T("Reset")) {
-                if ((address != Protocol::InvalidAddress) && (ParseDeviceAddressBody(request, address) == true)) {
-                    if ((commResult = _communicator.Reset(address) == Core::ERROR_NONE)) {
+                if (ParseDeviceAddressBody(request, address) == true) {
+                    if ((address != Protocol::InvalidAddress) && (commResult = _communicator.Reset(address) == Core::ERROR_NONE)) {
                         result->ErrorCode = Web::STATUS_ACCEPTED;
                         result->Message = string((_T("reset ok")));
                     } else {
                         result->ErrorCode = Web::STATUS_BAD_REQUEST;
                         result->Message = string(_T("failed to reset"));
                     }
+                } else {
+                    result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+                    result->Message = string(_T("Reset failed"));
                 }
-            } else {
-                result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
-                result->Message = string(_T("Reset failed"));
             }
         }
         return (result);
