@@ -72,7 +72,7 @@ void Storage::Clear(const uint16_t address)
     offset += _flash.writeUShort(offset, 0);
 
     for (uint16_t i(0); i < length; i++) {
-        offset += _flash.writeByte(offset + i, 0x00);
+        offset += _flash.writeByte(offset, 0x00);
     }
 
     if (_flash.commit() == true) {
