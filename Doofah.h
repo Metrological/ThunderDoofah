@@ -95,12 +95,8 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , Connector()
-                , Device(~0)
-                , Peripheral(Payload::Peripheral::ROOT)
             {
                 Add(_T("connector"), &Connector);
-                Add(_T("device"), &Device);
-                Add(_T("peripheral"), &Peripheral);
             }
             ~Config()
             {
@@ -108,8 +104,6 @@ namespace Plugin {
 
         public:
             Core::JSON::String Connector;
-            Core::JSON::DecUInt8 Device;
-            Core::JSON::EnumType<Payload::Peripheral> Peripheral;
         };
 
         static void FillDeviceInfo(const Payload::Device& info, DeviceEntry& entry)
