@@ -362,8 +362,28 @@ namespace SimpleSerial {
         // http://www.harctoolbox.org/IrScrutinizer.html (Opensource)
         // https://www.analysir.com/ (Paid)
         //
+        //  generic IR signal [mark][space][address][command](stop bit)
+        //  
+        //  __||||||||||___________|||___|||______|||___|||______|||______|||___|||.....
+        //    | mark   | space     |m  s |m    s  |     |        |        |     |
+        //    |       header       |  0  |   1    |  0  |   1    |    1   |  0  |
+        //    
+        //
+
+        typedef struct IRSignal {
+            uint16_t mark_us;
+            uint16_t space_us;
+        } IRSignal;
+
         typedef struct IRSettings {
             uint16_t carrier_hz;
+            uint8_t address_bits;
+            uint16_t address;
+            IRSignal header;
+            IRSignal zero;
+            IRSignal one;
+            bool msb_first;
+            bool stopbit;
         } IRSettings;
 
         typedef struct Device {
