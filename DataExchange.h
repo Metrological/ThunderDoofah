@@ -48,7 +48,7 @@ namespace SimpleSerial {
         TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Valid: %s", message.IsValid() ? "Yes" : "No"));
 
         if (message.IsComplete() == true) {
-            TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Ooperation: 0x%02X", message.Operation()));
+            TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Operation: 0x%02X", message.Operation()));
             TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Sequence: 0x%02X", message.Sequence()));
             TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Address: 0x%02X", message.Address()));
             TRACE_GLOBAL(Doofah::DataExchangeFlow, ("  - Payload length: %d", message.PayloadLength()));
