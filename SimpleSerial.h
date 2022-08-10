@@ -71,6 +71,7 @@ namespace SimpleSerial {
         enum class ResultType : uint8_t {
             OK = 0x00,
             NOT_CONNECTED,
+            UNSUPPORTED,
             NOT_AVAILABLE,
             TRANSMIT_FAILED,
             CRC_INVALID,
