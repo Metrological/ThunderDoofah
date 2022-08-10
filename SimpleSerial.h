@@ -322,11 +322,6 @@ namespace SimpleSerial {
             PRESSED = 0x01
         };
 
-        enum class PeripheralState : uint8_t {
-            UNINITIALIZED = 0x01,
-            AVAILABLE = 0x02,
-            OCCUPIED = 0x03
-        };
 
         enum class Peripheral : uint8_t {
             ROOT = 0x00,
@@ -389,7 +384,6 @@ namespace SimpleSerial {
 
         typedef struct Device {
             Protocol::DeviceAddressType address;
-            PeripheralState state;
             Peripheral peripheral;
         } Device;
 

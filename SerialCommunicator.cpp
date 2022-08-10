@@ -110,7 +110,6 @@ namespace Doofah {
                 SimpleSerial::Payload::Device device;
 
                 device.address = message.Current()->address;
-                device.state = message.Current()->state;
                 device.peripheral = message.Current()->peripheral;
 
                 devices.push_back(device);

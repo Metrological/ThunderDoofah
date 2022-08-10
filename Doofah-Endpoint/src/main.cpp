@@ -136,12 +136,11 @@ void Process(Protocol::Message& message)
 
             std::vector<Payload::Device> payload;
 
-            payload.push_back({ 0x00, Payload::PeripheralState::AVAILABLE, Payload::Peripheral::ROOT });
+            payload.push_back({ 0x00, Payload::Peripheral::ROOT });
 
             for (const auto& dev : devices) {
                 Payload::Device device;
                 device.address = (offset / sizeof(Payload::Device)) + 1;
-                device.state = Payload::PeripheralState::AVAILABLE;
                 device.peripheral = dev->Type();
                 payload.push_back(device);
 
