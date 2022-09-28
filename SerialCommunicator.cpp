@@ -99,7 +99,7 @@ namespace Doofah {
         uint32_t result = _channel.Post(message, 1000);
 
         if (result != Core::ERROR_NONE) {
-            TRACE(Trace::Error, ("Post Failed: %d", result))
+            TRACE(Trace::Error, ("Post Failed: %d", result));
         } else if ((result == Core::ERROR_NONE) && (message.Result() != SimpleSerial::Protocol::ResultType::OK)) {
             TRACE(Trace::Error, ("Exchange Failed: %d", static_cast<uint8_t>(message.Result())));
             result = Core::ERROR_GENERAL;
