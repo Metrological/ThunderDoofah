@@ -1,4 +1,4 @@
-startmode = '@PLUGIN_DOOFAH_AUTOSTART@'
+startmode = '@PLUGIN_DOOFAH_STARTMODE@'
 
 configuration = JSON()
 
