@@ -31,7 +31,7 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_DOOFAH_AUTOSTART false CACHE STRING "Automaically start this plugin")
+set(PLUGIN_DOOFAH_STARTMODE "Deactivated" CACHE STRING "Preferred state of this plugin at startup of the framework")
 set(PLUGIN_DOOFAH_CONNECTOR_CONFIG "" CACHE STRING "Custom config for the connector port")
 
 add_library(${MODULE_NAME} SHARED
