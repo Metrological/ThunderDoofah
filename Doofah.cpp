@@ -21,7 +21,7 @@
 
 #include "Doofah.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(SimpleSerial::Payload::Peripheral) { SimpleSerial::Payload::Peripheral::ROOT, _TXT("root") },
     { SimpleSerial::Payload::Peripheral::BLE, _TXT("ble") },
@@ -184,7 +184,7 @@ namespace Plugin {
             result->Message = string(_T("TODO: return config for a specific device."));
         } else {
             // GET .../Doofah : Get all devices provided by an end-point
-            WPEFramework::Doofah::SerialCommunicator::DeviceIterator list = _communicator.Devices();
+            Thunder::Doofah::SerialCommunicator::DeviceIterator list = _communicator.Devices();
 
             Core::ProxyType<Web::JSONBodyType<Doofah::DeviceList>> devices(jsonResponseFactoryDevicesList.Element());
 
@@ -289,4 +289,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

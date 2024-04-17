@@ -3,7 +3,7 @@
 #include <Log.h>
 
 namespace Doofhah {
-using namespace WPEFramework::SimpleSerial;
+using namespace Thunder::SimpleSerial;
 
 Controller& Controller::Instance()
 {

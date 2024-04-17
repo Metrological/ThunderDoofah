@@ -23,7 +23,7 @@
 
 #include "JsonData_Doofah.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
     using namespace JsonData::Doofah;
 
@@ -101,7 +101,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     uint32_t Doofah::JSONRPCDevices(Core::JSON::ArrayType<DeviceEntry>& response) const
     {
-        WPEFramework::Doofah::SerialCommunicator::DeviceIterator list = _communicator.Devices();
+        Thunder::Doofah::SerialCommunicator::DeviceIterator list = _communicator.Devices();
 
         while (list.Next() == true) {
             DeviceEntry info;
@@ -135,4 +135,4 @@ namespace Plugin {
         Notify(_T("started"));
     }
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

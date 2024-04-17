@@ -27,9 +27,9 @@
 
 #include "SerialCommunicator.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
-    using namespace WPEFramework::SimpleSerial;
+    using namespace Thunder::SimpleSerial;
     using namespace JsonData::Doofah;
 
     class Doofah : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
@@ -63,7 +63,7 @@ namespace Plugin {
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
 
-        class Sink : public WPEFramework::Doofah::SerialCommunicator::ICallback {
+        class Sink : public Thunder::Doofah::SerialCommunicator::ICallback {
         private:
             Sink(const Sink&) = delete;
             Sink& operator=(const Sink&) = delete;
@@ -128,7 +128,7 @@ namespace Plugin {
             ~DeviceList() override = default;
 
         public:
-            void Set(WPEFramework::Doofah::SerialCommunicator::DeviceIterator& list)
+            void Set(Thunder::Doofah::SerialCommunicator::DeviceIterator& list)
             {
                 list.Reset(0);
 
@@ -175,9 +175,9 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
-        WPEFramework::Doofah::SerialCommunicator _communicator;
+        Thunder::Doofah::SerialCommunicator _communicator;
         Sink _sink;
         PluginHost::IShell* _service;
     };
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
