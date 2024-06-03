@@ -26,7 +26,7 @@
 
 #include <list>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Doofah {
     class SerialCommunicator {
@@ -372,4 +372,4 @@ namespace Doofah {
         ICallback* _callback;
     }; // class SerialCommunicator
 } // namespace plugin
-} // namespace WPEFramework
+} // namespace Thunder

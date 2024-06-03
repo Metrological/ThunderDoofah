@@ -19,7 +19,7 @@
 
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Doofah {
     class DataExchangeFlow {
     public:
@@ -53,4 +53,4 @@ namespace Doofah {
         std::string _text;
     }; // class DataExchangeFlow
 } // namespace Doofah
-} // namespace WPEFramework
+} // namespace Thunder

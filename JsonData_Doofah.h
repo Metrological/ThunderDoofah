@@ -24,7 +24,7 @@
 
 #include "SimpleSerial.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace JsonData {
     namespace Doofah {
         class KeyInfo : public Core::JSON::Container {
@@ -142,4 +142,4 @@ namespace JsonData {
         }; // class DeviceEntry
     } // namespace Doofah
 } // namespace JsonData
-} // namespace WPEFramework
+} // namespace Thunder

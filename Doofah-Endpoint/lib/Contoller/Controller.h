@@ -4,7 +4,7 @@
 #include <vector>
 
 namespace Doofhah {
-using namespace WPEFramework::SimpleSerial;
+using namespace Thunder::SimpleSerial;
 
 class Controller {
 public:

@@ -27,7 +27,7 @@
 #define ASSERT(x)
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace SimpleSerial {
     namespace Protocol {
         // Super Simple Serial Protocol
@@ -400,4 +400,4 @@ namespace SimpleSerial {
 
     } // namespace Payload
 } // namespace SimpleSerial
-} // namespace WPEFramework
+} // namespace Thunder

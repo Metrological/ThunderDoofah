@@ -26,7 +26,7 @@
 
 #include "Tracing.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace SimpleSerial {
     static Protocol::SequenceType GetSequence()
     {
@@ -302,4 +302,4 @@ namespace SimpleSerial {
         Protocol::Message _buffer;
     };
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

@@ -12,7 +12,7 @@
 
 #include <string>
 
-using namespace WPEFramework::SimpleSerial;
+using namespace Thunder::SimpleSerial;
 using namespace Doofhah;
 
 static Controller::Peripheral<BleKeyboardDevice> ble("Doofah", "Metrological");

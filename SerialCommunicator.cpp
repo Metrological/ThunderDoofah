@@ -22,7 +22,7 @@
 #include "DataExchange.h"
 #include "SimpleSerial.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Core::SerialPort::FlowControl) { Core::SerialPort::OFF, _TXT("off") },
     { Core::SerialPort::HARDWARE, _TXT("hardware") },
@@ -182,4 +182,4 @@ namespace Doofah {
         return result;
     }
 } // namespace Doofah
-} // namespace WPEFramework
+} // namespace Thunder
